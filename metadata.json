@@ -1,0 +1,6 @@
+{
+  "name": "9ja Legal Assistant",
+  "description": "A premier oversight platform for secure estate management, admin control nodes, real-time national security vetting stamps, and resident directories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
