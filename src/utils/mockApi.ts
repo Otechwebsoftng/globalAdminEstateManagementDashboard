@@ -1,3 +1,7 @@
+// DEPRECATED: This file is no longer used.
+// All API calls now go through src/services/api.ts
+// Kept for reference only. Can be deleted.
+
 // Mock API utility for dummy data
 export const mockApi = {
   // Simulate login

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { 
   Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2, 
   MapPin, Clock, DollarSign, Send, ClipboardList, Menu, X, CheckSquare, 
@@ -12,6 +12,8 @@ import EstateDetailView from "./EstateDetailView";
 import ResidentDetailView from "./ResidentDetailView";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { globalAdminApi, estateApi, roleApi } from "../../services/api";
+import type { Estate, Resident, Admin, Role } from "../../types/api";
 
 interface GlobalDashboardProps {}
 
@@ -53,16 +55,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // Dashboard summary data
   const [dashboardStats, setDashboardStats] = useState({
-    totalEstates: 24,
-    totalResidents: 12532,
-    totalStaff: 1234,
-    revenue: "₦234,355",
-    recentActivity: [
-      { id: 1, action: "New resident registered", estate: "Sunset Valley", time: "2 hours ago" },
-      { id: 2, action: "Security alert resolved", estate: "Green Park", time: "4 hours ago" },
-      { id: 3, action: "Payment received", estate: "Lakeside", time: "1 day ago" },
-    ]
+    totalEstates: 0,
+    totalResidents: 0,
+    totalStaff: 0,
+    revenue: "₦0",
+    recentActivity: [] as Array<{ id: string | number; action: string; estate: string; time: string }>
   });
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
 
   // Sidebar Estate Management collapsible state
   const [isEstateMenuExpanded, setIsEstateMenuExpanded] = useState(true);
@@ -76,13 +75,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   // Active Admin Actions Popover row ID tracking
   const [activeRowActionMenuId, setActiveRowActionMenuId] = useState<string | null>(null);
 
-  // Estates Database State - Matches the clean image
-  const [estates, setEstates] = useState([
-    { id: "est-1", name: "Sunset Valley Residences", owner: "John Miller", email: "youremail@gmail.com", phone: "+234 813-587-6754", address: "402, Marble Towers, Kingsway Road", city: "Lagos", tier: "ENTERPRISE", status: "Active", date: "Mar 14, 2026" },
-    { id: "est-2", name: "Sunset Valley Residences", owner: "John Miller", email: "youremail@gmail.com", phone: "+234 813-587-6754", address: "402, Marble Towers, Kingsway Road", city: "Lagos", tier: "ENTERPRISE", status: "Active", date: "Mar 14, 2026" },
-    { id: "est-3", name: "Sunset Valley Residences", owner: "John Miller", email: "youremail@gmail.com", phone: "+234 813-587-6754", address: "402, Marble Towers, Kingsway Road", city: "Lagos", tier: "ENTERPRISE", status: "Active", date: "Mar 14, 2026" },
-    { id: "est-4", name: "Sunset Valley Residences", owner: "John Miller", email: "youremail@gmail.com", phone: "+234 813-587-6754", address: "402, Marble Towers, Kingsway Road", city: "Lagos", tier: "ENTERPRISE", status: "Active", date: "Mar 14, 2025" }
-  ]);
+  // Estates Database State
+  const [estates, setEstates] = useState<Estate[]>([]);
+  const [isEstatesLoading, setIsEstatesLoading] = useState(true);
 
   // State to manage Onboard Estate Modal input - matches frame 1618686559/1618686560
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
@@ -96,13 +91,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     tier: "ENTERPRISE"
   });
 
-  // Residents State Match
-  const [residents, setResidents] = useState([
-    { id: "res-1", name: "Emmanuel Chinedu", email: "e.chinedu@gmail.com", phone: "+234 803 123 4567", estate: "Sunset Valley Residences", houseNo: "Block 4A, Flat 12", status: "Active", vehicles: ["Toyota Camry (LND-492-AA)"], familyCount: 3, joinedDate: "Feb 10, 2026" },
-    { id: "res-2", name: "Sarah Ojo", email: "sarahojo@gmail.com", phone: "+234 812 998 1234", estate: "Sunset Valley Residences", houseNo: "Villa B4", status: "Active", vehicles: ["Honda Accord (PHC-111-YY)"], familyCount: 4, joinedDate: "Jan 15, 2026" },
-    { id: "res-3", name: "John Doe", email: "johndoe@gmail.com", phone: "+234 706 777 8888", estate: "Sunset Valley Residences", houseNo: "Apartment A12", status: "Active", vehicles: ["Toyota Corolla (ABJ-112-XX)"], familyCount: 2, joinedDate: "Mar 02, 2026" },
-    { id: "res-4", name: "Emma Eze", email: "emmaeze@gmail.com", phone: "+234 905 555 1122", estate: "Sunset Valley Residences", houseNo: "Villa 7B", status: "Active", vehicles: ["Mercedes GLK (KTN-888-MM)"], familyCount: 5, joinedDate: "Apr 11, 2026" }
-  ]);
+  // Residents State
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [isResidentsLoading, setIsResidentsLoading] = useState(true);
 
   const [activeResidentTabState, setActiveResidentTabState] = useState<"All" | "Lagos" | "Abuja" | "Port Harcourt">("All");
   // Track selected estate for detail view (derived from URL)
@@ -120,17 +111,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Staff, Admin, Resident state
-  const [staffList, setStaffList] = useState<any[]>([
-    { id: "stf-1", name: "James Okafor", email: "james.okafor@vanguard.ng", phone: "+234 803 111 2233", gender: "Male", role: "Security", assignedTo: "Emmanuel Clark", estate: "Sunset Valley Residences", shift: "Morning (6AM - 2PM)", status: "Active", added: "Jan 12, 2026", staffId: "STF-001" },
-    { id: "stf-2", name: "Chioma Nwosu", email: "chioma.nwosu@vanguard.ng", phone: "+234 812 444 5566", gender: "Female", role: "Cleaner", assignedTo: "Aisha Bello", estate: "Green Park Estate", shift: "Afternoon (2PM - 10PM)", status: "Active", added: "Feb 05, 2026", staffId: "STF-002" },
-    { id: "stf-3", name: "Musa Bello", email: "musa.bello@vanguard.ng", phone: "+234 905 777 8899", gender: "Male", role: "Driver", assignedTo: "Emmanuel Clark", estate: "Lakeside Gardens", shift: "Morning (6AM - 2PM)", status: "Suspended", added: "Mar 20, 2025", staffId: "STF-003" },
-  ]);
-  const [adminsList, setAdminsList] = useState<any[]>([
-    { id: "adm-1", name: "Emmanuel Clark", email: "admin@globalestates.ng", role: "Super Admin", status: "Active", lastActivity: "Just now" },
-    { id: "adm-2", name: "Aisha Bello", email: "aisha.bello@vanguard.ng", role: "Admin", status: "Active", lastActivity: "2 hours ago" },
-    { id: "adm-3", name: "Tunde Bakare", email: "tunde.bakare@vanguard.ng", role: "Support Admin", status: "Active", lastActivity: "Yesterday" },
-  ]);
-  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", role: "Super Admin" });
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [adminsList, setAdminsList] = useState<Admin[]>([]);
+  const [isAdminsLoading, setIsAdminsLoading] = useState(true);
+  const [rolesList, setRolesList] = useState<Role[]>([]);
+  const [newAdmin, setNewAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [newResident, setNewResident] = useState({ name: "", email: "", phone: "", houseNo: "" });
   const [editingResident, setEditingResident] = useState<any>(null);
@@ -153,61 +138,166 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   const handleEditResidentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would update the resident
     setIsEditResidentModalOpen(false);
     setEditingResident(null);
   };
 
-  // Onboard Estate function - frame 1618686560 style additions
-  const handleOnboardEstateSubmit = (e: React.FormEvent) => {
+  // Onboard Estate function
+  const handleOnboardEstateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEstate.name || !newEstate.email) return;
 
-    const added = {
-      id: `est-${Date.now()}`,
-      ...newEstate,
-      status: "Active",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
-    };
+    try {
+      const nameParts = newEstate.name.split(" ");
+      const response = await estateApi.onboard({
+        estateName: newEstate.name,
+        firstName: nameParts[0] || "",
+        lastName: nameParts.slice(1).join(" ") || "",
+        cac: "",
+        countryCode: "+234",
+        phoneNumber: newEstate.phone,
+        email: newEstate.email,
+        address: newEstate.address,
+        city: newEstate.city,
+        state: "Lagos",
+        country: "Nigeria",
+      });
+      if (response.success) {
+        fetchEstates();
+      }
+    } catch (err: any) {
+      console.error("Failed to onboard estate:", err.message);
+    }
 
-    setEstates([added, ...estates]);
     setIsOnboardModalOpen(false);
-    setNewEstate({
-      name: "",
-      owner: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "Lagos",
-      tier: "ENTERPRISE"
-    });
+    setNewEstate({ name: "", owner: "", email: "", phone: "", address: "", city: "Lagos", tier: "ENTERPRISE" });
   };
 
-  const handleEditEstateSubmit = (e: React.FormEvent) => {
+  const handleEditEstateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEstates(estates.map(est => est.id === editingEstate.id ? editingEstate : est));
+    if (!editingEstate) return;
+    try {
+      await estateApi.update(editingEstate.id, {
+        estateName: editingEstate.estateName || editingEstate.name,
+        cac: editingEstate.cac || "",
+        address: editingEstate.address,
+        lga: editingEstate.lga || "",
+        city: editingEstate.city,
+        state: editingEstate.state || "Lagos",
+        country: editingEstate.country || "Nigeria",
+      });
+      fetchEstates();
+    } catch (err: any) {
+      console.error("Failed to update estate:", err.message);
+    }
     setIsEditModalOpen(false);
     setEditingEstate(null);
   };
 
   // Add new admin function
-  const handleAddAdminSubmit = (e: React.FormEvent) => {
+  const handleAddAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdmin.name || !newAdmin.email) return;
+    if (!newAdmin.firstName || !newAdmin.email) return;
 
-    const added = {
-      id: `adm-${Date.now()}`,
-      name: newAdmin.name,
-      email: newAdmin.email,
-      role: newAdmin.role,
-      status: "Active",
-      lastActivity: "Created just now"
-    };
+    try {
+      await globalAdminApi.onboard({
+        firstName: newAdmin.firstName,
+        lastName: newAdmin.lastName,
+        email: newAdmin.email,
+        countryCode: "+234",
+        phoneNumber: "",
+        roleId: newAdmin.roleId,
+      });
+      fetchAdmins();
+    } catch (err: any) {
+      console.error("Failed to onboard admin:", err.message);
+    }
 
-    setAdminsList([added, ...adminsList]);
     setIsAdminModalOpen(false);
-    setNewAdmin({ name: "", email: "", role: "Super Admin" });
+    setNewAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
   };
+
+  // ── Data Fetching ──────────────────────────────────────────
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setIsDashboardLoading(true);
+      const res = await globalAdminApi.getDashboard();
+      if (res.success && res.data) {
+        setDashboardStats({
+          totalEstates: res.data.totalEstates || 0,
+          totalResidents: res.data.totalResidents || 0,
+          totalStaff: res.data.totalStaff || 0,
+          revenue: "₦0",
+          recentActivity: res.data.recentActivity || [],
+        });
+      }
+    } catch (err: any) {
+      console.error("Failed to load dashboard:", err.message);
+    } finally {
+      setIsDashboardLoading(false);
+    }
+  }, []);
+
+  const fetchEstates = useCallback(async () => {
+    try {
+      setIsEstatesLoading(true);
+      const res = await estateApi.list();
+      if (res.success && res.data) {
+        const mapped = res.data.map((e: Estate) => ({
+          ...e,
+          name: e.estateName,
+          owner: `${e.firstName} ${e.lastName}`.trim(),
+          phone: `${e.countryCode}${e.phoneNumber}`,
+          tier: "ENTERPRISE",
+          status: "Active",
+          date: e.createdAt ? new Date(e.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "",
+        }));
+        setEstates(mapped);
+      }
+    } catch (err: any) {
+      console.error("Failed to load estates:", err.message);
+    } finally {
+      setIsEstatesLoading(false);
+    }
+  }, []);
+
+  const fetchAdmins = useCallback(async () => {
+    try {
+      setIsAdminsLoading(true);
+      const res = await globalAdminApi.list();
+      if (res.success && res.data) {
+        const mapped = res.data.map((a: Admin) => ({
+          ...a,
+          name: `${a.firstName} ${a.lastName}`.trim(),
+          role: a.role?.name || "Admin",
+          lastActivity: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
+        }));
+        setAdminsList(mapped);
+      }
+    } catch (err: any) {
+      console.error("Failed to load admins:", err.message);
+    } finally {
+      setIsAdminsLoading(false);
+    }
+  }, []);
+
+  const fetchRoles = useCallback(async () => {
+    try {
+      const res = await roleApi.list();
+      if (res.success && res.data) {
+        setRolesList(res.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load roles:", err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+    fetchEstates();
+    fetchAdmins();
+    fetchRoles();
+  }, [fetchDashboard, fetchEstates, fetchAdmins, fetchRoles]);
 
   const renderDashboardView = () => (
     <div className="space-y-6">
@@ -2798,16 +2888,29 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             </div>
 
             <form onSubmit={handleAddAdminSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Full Name</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="e.g. Dr. Abdul Suleiman"
-                  value={newAdmin.name}
-                  onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
-                  className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">First Name</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="e.g. Abdul"
+                    value={newAdmin.firstName}
+                    onChange={(e) => setNewAdmin({ ...newAdmin, firstName: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Last Name</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="e.g. Suleiman"
+                    value={newAdmin.lastName}
+                    onChange={(e) => setNewAdmin({ ...newAdmin, lastName: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
               </div>
 
               <div>
@@ -2825,13 +2928,21 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Administrative Role Category</label>
                 <select
-                  value={newAdmin.role}
-                  onChange={(e) => setNewAdmin({ ...newAdmin, role: e.target.value })}
+                  value={newAdmin.roleId}
+                  onChange={(e) => setNewAdmin({ ...newAdmin, roleId: e.target.value })}
                   className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
                 >
-                  <option>Super Admin</option>
-                  <option>Support Lead</option>
-                  <option>System Admin</option>
+                  <option value="">Select Role</option>
+                  {rolesList.map((role) => (
+                    <option key={role.id} value={role.id}>{role.name}</option>
+                  ))}
+                  {rolesList.length === 0 && (
+                    <>
+                      <option value="super-admin">Super Admin</option>
+                      <option value="support-lead">Support Lead</option>
+                      <option value="system-admin">System Admin</option>
+                    </>
+                  )}
                 </select>
               </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ShieldCheck, Mail, Lock, ArrowRight, Check, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "../../services/api";
 
 interface EstateLoginProps {
   onLoginSuccess?: (adminName: string) => void;
@@ -12,19 +13,24 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   const auth = useAuth();
   const navigate = useNavigate();
   const [authStep, setAuthStep] = useState<"login" | "two-factor" | "reset-password" | "set-new-password">("login");
-  const [email, setEmail] = useState("admin@globalestates.ng");
-  const [password, setPassword] = useState("Vanguard2026!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // 2FA state
   const [otp, setOtp] = useState<string[]>(["", "", "", ""]);
-  const [countdown, setCountdown] = useState(252); // 4 mins 12 secs
+  const [countdown, setCountdown] = useState(252);
   
   // Set New Password state
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [strengthScore, setStrengthScore] = useState(0);
+
+  // Reset password state
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetOtp, setResetOtp] = useState<string[]>(["", "", "", ""]);
+  const [resetStep, setResetStep] = useState<"email" | "otp" | "new-password">("email");
 
   // 2FA Timer Countdown
   useEffect(() => {
@@ -51,23 +57,26 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setStrengthScore(score);
   }, [newPassword]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setErrors("Please fill in all details.");
       return;
     }
-    if (email !== "admin@globalestates.ng" || password !== "Vanguard2026!") {
-      setErrors("Invalid email or password. Try demo: admin@globalestates.ng / Vanguard2026!");
-      return;
-    }
     setErrors("");
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const response = await authApi.loginGlobalAdmin({ email, password });
+      if (response.success && response.data?.mfaToken) {
+        auth.setMfaToken(response.data.mfaToken);
+        setAuthStep("two-factor");
+      }
+    } catch (err: any) {
+      setErrors(err.message || "Invalid email or password.");
+    } finally {
       setIsLoading(false);
-      setAuthStep("two-factor");
-    }, 1000);
+    }
   };
 
   const handleOtpChange = (index: number, val: string) => {
@@ -76,14 +85,13 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     newOtp[index] = val.substring(val.length - 1);
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (val && index < 3) {
       const nextInp = document.getElementById(`2fa-otp-${index + 1}`);
       nextInp?.focus();
     }
   };
 
-  const handleVerify2FA = () => {
+  const handleVerify2FA = async () => {
     const code = otp.join("");
     if (code.length < 4) {
       setErrors("Complete the 4-digit token verification.");
@@ -92,24 +100,82 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setErrors("");
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const mfaToken = auth.mfaToken;
+      const response = await authApi.verifyOtp({
+        otpType: "ADMIN_LOGIN",
+        otp: code,
+        email,
+      });
+      if (response.success && response.data?.accessToken) {
+        const u = response.data.user;
+        const userData = {
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`,
+          role: u.role?.name || "Global Administrator",
+          email: u.email,
+        };
+        auth.login(userData, response.data.accessToken);
+        if (onLoginSuccess) onLoginSuccess(userData.name);
+        navigate("/admin/dashboard");
+      }
+    } catch (err: any) {
+      setErrors(err.message || "Invalid OTP code.");
+    } finally {
       setIsLoading(false);
-      const userData = { id: "admin-1", name: "Emmanuel Clark", role: "Global Administrator", email: "admin@globalestates.ng" };
-      auth.login(userData);
-      if (onLoginSuccess) onLoginSuccess("Emmanuel Clark");
-    }, 1200);
+    }
   };
 
-  const handleResetRequest = (e: React.FormEvent) => {
+  const handleResendOtp = async () => {
+    try {
+      await authApi.resendOtp({ otpType: "ADMIN_LOGIN", email });
+      setCountdown(252);
+    } catch (err: any) {
+      setErrors(err.message || "Failed to resend OTP.");
+    }
+  };
+
+  const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email) {
+      setErrors("Please enter your email address.");
+      return;
+    }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authApi.forgotPassword({ email });
+      setResetEmail(email);
       setAuthStep("set-new-password");
-    }, 1200);
+      setResetStep("otp");
+    } catch (err: any) {
+      setErrors(err.message || "Failed to send reset link.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handlePasswordResetComplete = (e: React.FormEvent) => {
+  const handleResetOtpVerify = async () => {
+    const code = resetOtp.join("");
+    if (code.length < 4) {
+      setErrors("Enter the complete 4-digit code.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await authApi.verifyPasswordOtp({
+        otpType: "FORGOT_PASSWORD",
+        otp: code,
+        email: resetEmail,
+      });
+      setResetStep("new-password");
+    } catch (err: any) {
+      setErrors(err.message || "Invalid OTP code.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordResetComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       setErrors("Passwords do not match.");
@@ -120,11 +186,19 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const code = resetOtp.join("");
+      await authApi.resetPassword(code, { password: newPassword, email: resetEmail });
       alert("Security Credentials successfully updated! You can now sign in with your new password.");
       setAuthStep("login");
-    }, 1200);
+      setResetStep("email");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setErrors(err.message || "Failed to reset password.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -141,7 +215,6 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
             </div>
             <div>
               <span className="text-sm font-black tracking-tight text-slate-900 block leading-tight">Overall Admin</span>
-              {/* <span className="block text-[10px] text-gray-400 font-bold uppercase leading-none tracking-tight">Oversight Platform</span> */}
             </div>
           </div>
 
@@ -273,32 +346,38 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                 <p className="text-xs text-rose-600 font-medium mb-3">{errors}</p>
               )}
 
-              {/* Simulation Helper */}
-              <div className="bg-blue-50/40 border border-blue-105 p-3.5 rounded-xl text-left text-[11px] text-blue-900 flex flex-col gap-1.5">
-                <span className="font-bold text-blue-700 uppercase text-[9px] tracking-wider block">Sandbox Key Release</span>
-                <span>Enter any 4-digit security code (e.g. <b className="font-mono text-blue-700">2026</b>) to bypass state authentication and enter the admin console.</span>
-              </div>
-
               <div className="space-y-4">
                 <button 
                   onClick={handleVerify2FA}
+                  disabled={isLoading}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer shadow-md"
                 >
-                  Verify and Enter Dashboard
+                  {isLoading ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Verify and Enter Dashboard"
+                  )}
                 </button>
 
                 <div className="flex justify-between items-center text-xs font-semibold px-1">
                   <button 
-                    onClick={() => setAuthStep("login")}
+                    onClick={() => { setAuthStep("login"); setErrors(""); }}
                     className="text-gray-500 hover:text-slate-800 flex items-center gap-1.5 cursor-pointer"
                   >
                     Change Credentials
                   </button>
 
-                  <span className="text-gray-400 font-mono text-[11px] flex items-center gap-1">
+                  <button
+                    onClick={handleResendOtp}
+                    className="text-gray-400 font-mono text-[11px] flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                  >
                     <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                    Resend code in <b className="text-blue-600 font-bold">{formatTime(countdown)}</b>
-                  </span>
+                    {countdown > 0 ? (
+                      <>Resend code in <b className="text-blue-600 font-bold">{formatTime(countdown)}</b></>
+                    ) : (
+                      <span className="text-blue-600 font-bold">Resend Code</span>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
@@ -335,18 +414,32 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                   />
                 </div>
 
+                {errors && (
+                  <p className="text-xs text-rose-600 font-medium flex items-center gap-1.5 bg-rose-50 p-2.5 rounded-lg border border-rose-100">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors}
+                  </p>
+                )}
+
                 <button 
                   type="submit"
+                  disabled={isLoading}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1"
                 >
-                  <span>Send Recovery Link</span>
-                  <ArrowRight className="h-4 w-4" />
+                  {isLoading ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Send Recovery Link</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </button>
 
                 <div className="text-center">
                   <button 
                     type="button"
-                    onClick={() => setAuthStep("login")}
+                    onClick={() => { setAuthStep("login"); setErrors(""); }}
                     className="text-xs text-gray-500 hover:text-slate-800 font-semibold underline"
                   >
                     Back to Sign In
@@ -356,7 +449,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
             </div>
           )}
 
-          {/* DYNAMIC PASSWORD STRENGTH & SET NEW PASSWORD */}
+          {/* SET NEW PASSWORD (after OTP verification) */}
           {authStep === "set-new-password" && (
             <div className="my-auto space-y-5">
               <div>
@@ -364,118 +457,159 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                   CREDENTIAL RENEWAL
                 </span>
                 <h2 className="text-2xl font-black text-slate-900 font-display tracking-tight leading-normal mt-3">
-                  Create New Password
+                  {resetStep === "otp" ? "Enter Reset Code" : "Create New Password"}
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Choose a robust password to shield your central estate service accesses.
+                  {resetStep === "otp"
+                    ? "Enter the 4-digit code sent to your email."
+                    : "Choose a robust password to shield your central estate service accesses."}
                 </p>
               </div>
 
-              <form onSubmit={handlePasswordResetComplete} className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-0.5">
-                    Your Password
-                  </label>
-                  <input 
-                    type="password"
-                    required
-                    placeholder="Enter security password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full text-xs px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 font-mono text-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-0.5">
-                    Confirm Password
-                  </label>
-                  <input 
-                    type="password"
-                    required
-                    placeholder="Re-enter password for checking"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full text-xs px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 font-mono text-slate-900"
-                  />
-                </div>
-
-                {/* LIVING PASSWORD STRENGTH FEEDBACK */}
-                <div className="p-3 bg-gray-50 border border-gray-150 rounded-xl space-y-2.5">
-                  <div className="flex justify-between items-center text-[10px] font-bold">
-                    <span className="text-gray-400">Password Strength:</span>
-                    <span className={`uppercase ${
-                      strengthScore === 4 
-                        ? "text-green-600" 
-                        : strengthScore >= 2 
-                        ? "text-amber-600" 
-                        : "text-rose-600"
-                    }`}>
-                      {strengthScore === 4 ? "Strong" : strengthScore >= 2 ? "Moderate" : "Weak"}
-                    </span>
+              {resetStep === "otp" && (
+                <div className="space-y-4">
+                  <div className="flex gap-3.5 justify-center my-4">
+                    {resetOtp.map((dig, idx) => (
+                      <input
+                        key={idx}
+                        id={`reset-otp-${idx}`}
+                        type="text"
+                        maxLength={1}
+                        value={dig}
+                        onChange={(e) => {
+                          if (isNaN(Number(e.target.value))) return;
+                          const newOtp = [...resetOtp];
+                          newOtp[idx] = e.target.value.substring(e.target.value.length - 1);
+                          setResetOtp(newOtp);
+                          if (e.target.value && idx < 3) {
+                            document.getElementById(`reset-otp-${idx + 1}`)?.focus();
+                          }
+                        }}
+                        className="w-12 h-12 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900"
+                      />
+                    ))}
                   </div>
 
-                  {/* Visual segment bars */}
-                  <div className="flex gap-1.5 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-300 ${
-                      strengthScore >= 1 ? "bg-rose-500 w-1/4" : "w-0"
-                    }`} />
-                    <div className={`h-full rounded-full transition-all duration-300 ${
-                      strengthScore >= 2 ? "bg-amber-500 w-1/4" : "w-0"
-                    }`} />
-                    <div className={`h-full rounded-full transition-all duration-300 ${
-                      strengthScore >= 3 ? "bg-emerald-500 w-1/4" : "w-0"
-                    }`} />
-                    <div className={`h-full rounded-full transition-all duration-300 ${
-                      strengthScore === 4 ? "bg-green-500 w-1/4" : "w-0"
-                    }`} />
-                  </div>
+                  {errors && (
+                    <p className="text-xs text-rose-600 font-medium">{errors}</p>
+                  )}
 
-                  {/* Rules Checklists */}
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1">
-                    
-                    <div className="flex items-center gap-1.5 text-[9px] font-medium">
-                      <div className={`h-3 w-3 rounded-full flex items-center justify-center ${newPassword.length >= 8 ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
-                        <Check className="h-2 w-2 stroke-[4]" />
-                      </div>
-                      <span className={newPassword.length >= 8 ? "text-gray-700" : "text-gray-405"}>At least 8 characters</span>
-                    </div>
+                  <button
+                    onClick={handleResetOtpVerify}
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    {isLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Verify Code"}
+                  </button>
 
-                    <div className="flex items-center gap-1.5 text-[9px] font-medium">
-                      <div className={`h-3 w-3 rounded-full flex items-center justify-center ${/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
-                        <Check className="h-2 w-2 stroke-[4]" />
-                      </div>
-                      <span className={/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? "text-gray-700" : "text-gray-405"}>Uppercase balance</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[9px] font-medium">
-                      <div className={`h-3 w-3 rounded-full flex items-center justify-center ${/[0-9]/.test(newPassword) ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
-                        <Check className="h-2 w-2 stroke-[4]" />
-                      </div>
-                      <span className={/[0-9]/.test(newPassword) ? "text-gray-700" : "text-gray-405"}>Contains number</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[9px] font-medium">
-                      <div className={`h-3 w-3 rounded-full flex items-center justify-center ${/[^A-Za-z0-9]/.test(newPassword) ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
-                        <Check className="h-2 w-2 stroke-[4]" />
-                      </div>
-                      <span className={/[^A-Za-z0-9]/.test(newPassword) ? "text-gray-700" : "text-gray-405"}>Letters & symbols</span>
-                    </div>
-
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => { setAuthStep("login"); setResetStep("email"); setErrors(""); }}
+                      className="text-xs text-gray-500 hover:text-slate-800 font-semibold underline"
+                    >
+                      Back to Sign In
+                    </button>
                   </div>
                 </div>
+              )}
 
-                {errors && (
-                  <p className="text-xs text-rose-600 font-medium">{errors}</p>
-                )}
+              {resetStep === "new-password" && (
+                <form onSubmit={handlePasswordResetComplete} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-0.5">
+                      Your Password
+                    </label>
+                    <input 
+                      type="password"
+                      required
+                      placeholder="Enter security password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full text-xs px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 font-mono text-slate-900"
+                    />
+                  </div>
 
-                <button 
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1"
-                >
-                  Reset Password & Continue
-                </button>
-              </form>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-0.5">
+                      Confirm Password
+                    </label>
+                    <input 
+                      type="password"
+                      required
+                      placeholder="Re-enter password for checking"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full text-xs px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 font-mono text-slate-900"
+                    />
+                  </div>
+
+                  {/* PASSWORD STRENGTH FEEDBACK */}
+                  <div className="p-3 bg-gray-50 border border-gray-150 rounded-xl space-y-2.5">
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-gray-400">Password Strength:</span>
+                      <span className={`uppercase ${
+                        strengthScore === 4 
+                          ? "text-green-600" 
+                          : strengthScore >= 2 
+                          ? "text-amber-600" 
+                          : "text-rose-600"
+                      }`}>
+                        {strengthScore === 4 ? "Strong" : strengthScore >= 2 ? "Moderate" : "Weak"}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-1.5 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-300 ${strengthScore >= 1 ? "bg-rose-500 w-1/4" : "w-0"}`} />
+                      <div className={`h-full rounded-full transition-all duration-300 ${strengthScore >= 2 ? "bg-amber-500 w-1/4" : "w-0"}`} />
+                      <div className={`h-full rounded-full transition-all duration-300 ${strengthScore >= 3 ? "bg-emerald-500 w-1/4" : "w-0"}`} />
+                      <div className={`h-full rounded-full transition-all duration-300 ${strengthScore === 4 ? "bg-green-500 w-1/4" : "w-0"}`} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-1">
+                      <div className="flex items-center gap-1.5 text-[9px] font-medium">
+                        <div className={`h-3 w-3 rounded-full flex items-center justify-center ${newPassword.length >= 8 ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
+                          <Check className="h-2 w-2 stroke-[4]" />
+                        </div>
+                        <span className={newPassword.length >= 8 ? "text-gray-700" : "text-gray-405"}>At least 8 characters</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[9px] font-medium">
+                        <div className={`h-3 w-3 rounded-full flex items-center justify-center ${/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
+                          <Check className="h-2 w-2 stroke-[4]" />
+                        </div>
+                        <span className={/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? "text-gray-700" : "text-gray-405"}>Uppercase balance</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[9px] font-medium">
+                        <div className={`h-3 w-3 rounded-full flex items-center justify-center ${/[0-9]/.test(newPassword) ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
+                          <Check className="h-2 w-2 stroke-[4]" />
+                        </div>
+                        <span className={/[0-9]/.test(newPassword) ? "text-gray-700" : "text-gray-405"}>Contains number</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[9px] font-medium">
+                        <div className={`h-3 w-3 rounded-full flex items-center justify-center ${/[^A-Za-z0-9]/.test(newPassword) ? "bg-emerald-50 text-emerald-600" : "bg-gray-200 text-gray-400"}`}>
+                          <Check className="h-2 w-2 stroke-[4]" />
+                        </div>
+                        <span className={/[^A-Za-z0-9]/.test(newPassword) ? "text-gray-700" : "text-gray-405"}>Letters & symbols</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {errors && (
+                    <p className="text-xs text-rose-600 font-medium">{errors}</p>
+                  )}
+
+                  <button 
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    {isLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Reset Password & Continue"}
+                  </button>
+                </form>
+              )}
             </div>
           )}
 
