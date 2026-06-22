@@ -52,15 +52,17 @@ class ApiError extends Error {
 
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  mfaToken?: string
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) || {}),
   };
 
-  if (authToken) {
+  if (mfaToken) {
+    headers["Authorization"] = `Bearer ${mfaToken}`;
+  } else if (authToken) {
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
@@ -100,15 +102,10 @@ export const authApi = {
   },
 
   verifyOtp(data: ActivateAccountDto, mfaToken?: string) {
-    const headers: Record<string, string> = {};
-    if (mfaToken) {
-      headers["Authorization"] = `Bearer ${mfaToken}`;
-    }
-    return request<VerifyOtpResponse>("/auth/admin/verify-user", {
+    return request<any>("/auth/admin/verify-user", {
       method: "PATCH",
       body: JSON.stringify(data),
-      headers,
-    });
+    }, mfaToken);
   },
 
   resendOtp(data: ResendOTPDto) {

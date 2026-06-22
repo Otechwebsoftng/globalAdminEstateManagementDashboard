@@ -70,7 +70,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     try {
       const response = await authApi.loginGlobalAdmin({ email, password }) as any;
       console.log("Login response:", response);
-      const mfaToken = response?.data?.mfaToken || response?.mfaToken;
+      const mfaToken = response?.token || response?.data?.mfaToken || response?.mfaToken;
       if (mfaToken) {
         auth.setMfaToken(mfaToken);
         setAuthStep("two-factor");
@@ -106,13 +106,15 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setIsLoading(true);
 
     try {
+      const mfaToken = auth.mfaToken || localStorage.getItem("global_estates_mfa_token");
+      console.log("MFA token being sent:", mfaToken);
       const response = await authApi.verifyOtp({
         otpType: "ADMIN_LOGIN",
         otp: code,
         email,
-      }, auth.mfaToken ?? undefined) as any;
+      }, mfaToken ?? undefined) as any;
       console.log("Verify OTP response:", response);
-      const accessToken = response?.data?.accessToken || response?.accessToken;
+      const accessToken = response?.data?.accessToken || response?.accessToken || response?.token;
       const user = response?.data?.user || response?.user;
       if (accessToken && user) {
         const userData = {
@@ -124,8 +126,11 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
         auth.login(userData, accessToken);
         if (onLoginSuccess) onLoginSuccess(userData.name);
         navigate("/admin/dashboard");
+      } else if (accessToken) {
+        auth.login({ id: "admin", name: "Administrator", role: "Global Admin", email }, accessToken);
+        navigate("/admin/dashboard");
       } else {
-        setErrors("OTP verification succeeded but no token received. Check console for response shape.");
+        setErrors("OTP verification succeeded but no token received. Check console.");
       }
     } catch (err: any) {
       setErrors(err.message || "Invalid OTP code.");
