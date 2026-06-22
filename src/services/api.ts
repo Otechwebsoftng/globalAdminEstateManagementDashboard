@@ -77,7 +77,9 @@ async function request<T>(
     throw new ApiError(errorMessage, res.status);
   }
 
-  return res.json();
+  const text = await res.text();
+  if (!text) return {} as T;
+  return JSON.parse(text);
 }
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -97,10 +99,15 @@ export const authApi = {
     });
   },
 
-  verifyOtp(data: ActivateAccountDto) {
+  verifyOtp(data: ActivateAccountDto, mfaToken?: string) {
+    const headers: Record<string, string> = {};
+    if (mfaToken) {
+      headers["Authorization"] = `Bearer ${mfaToken}`;
+    }
     return request<VerifyOtpResponse>("/auth/admin/verify-user", {
       method: "PATCH",
       body: JSON.stringify(data),
+      headers,
     });
   },
 

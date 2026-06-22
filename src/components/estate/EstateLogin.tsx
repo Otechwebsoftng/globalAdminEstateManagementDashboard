@@ -63,14 +63,19 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
       setErrors("Please fill in all details.");
       return;
     }
+    if (isLoading) return;
     setErrors("");
     setIsLoading(true);
 
     try {
-      const response = await authApi.loginGlobalAdmin({ email, password });
-      if (response.success && response.data?.mfaToken) {
-        auth.setMfaToken(response.data.mfaToken);
+      const response = await authApi.loginGlobalAdmin({ email, password }) as any;
+      console.log("Login response:", response);
+      const mfaToken = response?.data?.mfaToken || response?.mfaToken;
+      if (mfaToken) {
+        auth.setMfaToken(mfaToken);
         setAuthStep("two-factor");
+      } else {
+        setErrors("Login succeeded but no MFA token received. Check console for response shape.");
       }
     } catch (err: any) {
       setErrors(err.message || "Invalid email or password.");
@@ -101,23 +106,26 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setIsLoading(true);
 
     try {
-      const mfaToken = auth.mfaToken;
       const response = await authApi.verifyOtp({
         otpType: "ADMIN_LOGIN",
         otp: code,
         email,
-      });
-      if (response.success && response.data?.accessToken) {
-        const u = response.data.user;
+      }, auth.mfaToken ?? undefined) as any;
+      console.log("Verify OTP response:", response);
+      const accessToken = response?.data?.accessToken || response?.accessToken;
+      const user = response?.data?.user || response?.user;
+      if (accessToken && user) {
         const userData = {
-          id: u.id,
-          name: `${u.firstName} ${u.lastName}`,
-          role: u.role?.name || "Global Administrator",
-          email: u.email,
+          id: user.id,
+          name: `${user.firstName} ${user.lastName}`,
+          role: user.role?.name || "Global Administrator",
+          email: user.email,
         };
-        auth.login(userData, response.data.accessToken);
+        auth.login(userData, accessToken);
         if (onLoginSuccess) onLoginSuccess(userData.name);
         navigate("/admin/dashboard");
+      } else {
+        setErrors("OTP verification succeeded but no token received. Check console for response shape.");
       }
     } catch (err: any) {
       setErrors(err.message || "Invalid OTP code.");
