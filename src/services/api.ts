@@ -72,7 +72,13 @@ async function request<T>(
     let errorMessage = `Request failed (${res.status})`;
     try {
       const errorBody = await res.json();
-      errorMessage = errorBody.message || errorBody.error || errorMessage;
+      if (typeof errorBody.message === "string") {
+        errorMessage = errorBody.message;
+      } else if (typeof errorBody.message === "object" && errorBody.message?.message) {
+        errorMessage = errorBody.message.message;
+      } else if (typeof errorBody.error === "string") {
+        errorMessage = errorBody.error;
+      }
     } catch {
       // ignore parse error
     }
