@@ -19,7 +19,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   const [isLoading, setIsLoading] = useState(false);
 
   // 2FA state
-  const [otp, setOtp] = useState<string[]>(["", "", "", ""]);
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(252);
   
   // Set New Password state
@@ -29,7 +29,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
 
   // Reset password state
   const [resetEmail, setResetEmail] = useState("");
-  const [resetOtp, setResetOtp] = useState<string[]>(["", "", "", ""]);
+  const [resetOtp, setResetOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [resetStep, setResetStep] = useState<"email" | "otp" | "new-password">("email");
 
   // 2FA Timer Countdown
@@ -90,7 +90,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     newOtp[index] = val.substring(val.length - 1);
     setOtp(newOtp);
 
-    if (val && index < 3) {
+    if (val && index < 5) {
       const nextInp = document.getElementById(`2fa-otp-${index + 1}`);
       nextInp?.focus();
     }
@@ -98,8 +98,8 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
 
   const handleVerify2FA = async () => {
     const code = otp.join("");
-    if (code.length < 4) {
-      setErrors("Complete the 4-digit token verification.");
+    if (code.length < 6) {
+      setErrors("Complete the 6-digit token verification.");
       return;
     }
     setErrors("");
@@ -169,8 +169,8 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
 
   const handleResetOtpVerify = async () => {
     const code = resetOtp.join("");
-    if (code.length < 4) {
-      setErrors("Enter the complete 4-digit code.");
+    if (code.length < 6) {
+      setErrors("Enter the complete 6-digit code.");
       return;
     }
     setIsLoading(true);
@@ -341,7 +341,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
               </div>
 
               {/* Digits row */}
-              <div className="flex gap-3.5 justify-center my-6">
+              <div className="flex gap-2.5 sm:gap-3 justify-center my-6">
                 {otp.map((dig, idx) => (
                   <input
                     key={idx}
@@ -350,7 +350,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                     maxLength={1}
                     value={dig}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
-                    className="w-12 sm:w-14 h-12 sm:h-14 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900 max-w-[60px]"
+                    className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900"
                   />
                 ))}
               </div>
@@ -474,14 +474,14 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {resetStep === "otp"
-                    ? "Enter the 4-digit code sent to your email."
+                    ? "Enter the 6-digit code sent to your email."
                     : "Choose a robust password to shield your central estate service accesses."}
                 </p>
               </div>
 
               {resetStep === "otp" && (
                 <div className="space-y-4">
-                  <div className="flex gap-3.5 justify-center my-4">
+                  <div className="flex gap-2.5 sm:gap-3 justify-center my-4">
                     {resetOtp.map((dig, idx) => (
                       <input
                         key={idx}
@@ -494,11 +494,11 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                           const newOtp = [...resetOtp];
                           newOtp[idx] = e.target.value.substring(e.target.value.length - 1);
                           setResetOtp(newOtp);
-                          if (e.target.value && idx < 3) {
+                          if (e.target.value && idx < 5) {
                             document.getElementById(`reset-otp-${idx + 1}`)?.focus();
                           }
                         }}
-                        className="w-12 h-12 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900"
+                        className="w-10 sm:w-12 h-12 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900"
                       />
                     ))}
                   </div>
