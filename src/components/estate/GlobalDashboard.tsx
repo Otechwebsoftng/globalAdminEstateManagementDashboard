@@ -1099,12 +1099,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             {/* Profile: avatar only on mobile, with text on desktop */}
             <div className="flex items-center gap-2 sm:gap-3 border-l border-gray-200 pl-2 sm:pl-4 py-1">
               <div className="hidden sm:block text-right">
-                <span className="text-xs font-extrabold text-slate-950 block leading-tight">Emmanuel Stark</span>
+                <span className="text-xs font-extrabold text-slate-950 block leading-tight">{adminName}</span>
                 <span className="text-[9.5px] text-gray-400 font-semibold block uppercase">Global Administrator</span>
               </div>
               <img 
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                alt="Emmanuel Stark" 
+                alt={adminName} 
                 referrerPolicy="no-referrer"
                 className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-gray-150 object-cover shadow-sm bg-gray-200 shrink-0" 
               />

@@ -691,7 +691,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                   <img src="/image.png" alt="Emmanuel Clark" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <span className="text-sm font-bold block">Emmanuel Stark</span>
+                  <span className="text-sm font-bold block">Verified Platform Admin</span>
                   <span className="text-[12px] opacity-80 block">VP of Operations, Global Estates</span>
                 </div>
               </div>

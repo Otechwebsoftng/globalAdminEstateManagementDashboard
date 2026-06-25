@@ -8,6 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area 
 } from "recharts";
+import { useAuth } from "../../context/AuthContext";
 
 interface EstateDetailViewProps {
   estate: any;
@@ -26,6 +27,8 @@ const visitorTrendData = [
 ];
 
 export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetailViewProps) {
+  const auth = useAuth();
+  const adminName = auth.user?.name || "Administrator";
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
 
   // Mock data for internal tabs
@@ -206,7 +209,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                     alt="Admin"
                   />
                   <div>
-                    <span className="text-xs font-black text-slate-900 block">Emmanuel Stark</span>
+                    <span className="text-xs font-black text-slate-900 block">{adminName}</span>
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter block leading-none">Global Administrator</span>
                   </div>
                 </div>

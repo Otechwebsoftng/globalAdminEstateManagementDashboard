@@ -5,6 +5,7 @@ import {
   MoreVertical, Search, Plus, Ban, Trash2, 
   Eye, Edit, UserX, UserPlus, History, ShieldAlert, X
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 interface ResidentDetailViewProps {
   resident: any;
@@ -13,6 +14,8 @@ interface ResidentDetailViewProps {
 }
 
 export default function ResidentDetailView({ resident, onBack }: ResidentDetailViewProps) {
+  const auth = useAuth();
+  const adminName = auth.user?.name || "Administrator";
   const [activeTab, setActiveTab] = useState<"staff" | "visitors" | "logs">("staff");
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [selectedVisitorCode, setSelectedVisitorCode] = useState<any>(null);
@@ -32,9 +35,9 @@ export default function ResidentDetailView({ resident, onBack }: ResidentDetailV
   ];
 
   const accessLogs = [
-    { id: 1, type: "Entry", time: "10:00PM, Today", officer: "Officer Emmanuel Stark", gate: "Gate A" },
-    { id: 2, type: "Exit", time: "09:00AM, Today", officer: "Officer Emmanuel Stark", gate: "Gate A" },
-    { id: 3, type: "Entry", time: "08:00PM, Yesterday", officer: "Officer Emmanuel Stark", gate: "Gate A" },
+    { id: 1, type: "Entry", time: "10:00PM, Today", officer: `Officer ${adminName}`, gate: "Gate A" },
+    { id: 2, type: "Exit", time: "09:00AM, Today", officer: `Officer ${adminName}`, gate: "Gate A" },
+    { id: 3, type: "Entry", time: "08:00PM, Yesterday", officer: `Officer ${adminName}`, gate: "Gate A" },
   ];
 
   const renderTabContent = () => {
@@ -325,7 +328,7 @@ export default function ResidentDetailView({ resident, onBack }: ResidentDetailV
                 alt="Admin"
               />
               <div>
-                <span className="text-xs font-black text-slate-900 block">Emmanuel Stark</span>
+                <span className="text-xs font-black text-slate-900 block">{adminName}</span>
                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter block leading-none">Global Administrator</span>
               </div>
             </div>
