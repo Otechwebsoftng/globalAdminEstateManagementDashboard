@@ -85,7 +85,6 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   };
 
   const handleOtpChange = (index: number, val: string) => {
-    if (isNaN(Number(val))) return;
     const newOtp = [...otp];
     newOtp[index] = val.substring(val.length - 1);
     setOtp(newOtp);
@@ -490,7 +489,6 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                         maxLength={1}
                         value={dig}
                         onChange={(e) => {
-                          if (isNaN(Number(e.target.value))) return;
                           const newOtp = [...resetOtp];
                           newOtp[idx] = e.target.value.substring(e.target.value.length - 1);
                           setResetOtp(newOtp);
