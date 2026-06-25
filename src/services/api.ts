@@ -7,7 +7,9 @@ import type {
   CreateEstateDto,
   EditEstateDto,
   CreateAdminDto,
+  CreateEstateAdminDto,
   UpdateAdminRoleDto,
+  UpdateEstateAdminRoleDto,
   CreateRoleDto,
   UpdateRoleDto,
   CreateMenuDto,
@@ -211,7 +213,7 @@ export const estateAdminApi = {
     return request<ApiSingleResponse<Admin>>(`/estate-admin/${adminId}`);
   },
 
-  onboard(data: CreateAdminDto) {
+  onboard(data: CreateEstateAdminDto) {
     return request<ApiSingleResponse<Admin>>("/estate-admin/onboard-admin", {
       method: "POST",
       body: JSON.stringify(data),

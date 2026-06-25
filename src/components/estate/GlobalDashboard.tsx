@@ -12,8 +12,8 @@ import EstateDetailView from "./EstateDetailView";
 import ResidentDetailView from "./ResidentDetailView";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { globalAdminApi, estateApi, roleApi } from "../../services/api";
-import type { Estate, Resident, Admin, Role } from "../../types/api";
+import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi } from "../../services/api";
+import type { Estate, Resident, Admin, Role, MenuItem, Permission } from "../../types/api";
 
 interface GlobalDashboardProps {}
 
@@ -115,6 +115,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [adminsList, setAdminsList] = useState<Admin[]>([]);
   const [isAdminsLoading, setIsAdminsLoading] = useState(true);
   const [rolesList, setRolesList] = useState<Role[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [permissionsList, setPermissionsList] = useState<Permission[]>([]);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [newRole, setNewRole] = useState({ name: "", description: "", permissionIds: [] as string[] });
   const [newAdmin, setNewAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [newResident, setNewResident] = useState({ name: "", email: "", phone: "", houseNo: "" });
@@ -217,6 +222,38 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     setNewAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
   };
 
+  const handleAdminSuspend = async (adminId: string) => {
+    if (!window.confirm("Are you sure you want to suspend this admin?")) return;
+    try {
+      await globalAdminApi.suspend(adminId);
+      fetchAdmins();
+    } catch (err: any) {
+      console.error("Failed to suspend admin:", err.message);
+    }
+    setActiveRowActionMenuId(null);
+  };
+
+  const handleAdminRestore = async (adminId: string) => {
+    try {
+      await globalAdminApi.restore(adminId);
+      fetchAdmins();
+    } catch (err: any) {
+      console.error("Failed to restore admin:", err.message);
+    }
+    setActiveRowActionMenuId(null);
+  };
+
+  const handleAdminSoftDelete = async (adminId: string) => {
+    if (!window.confirm("Are you sure you want to delete this admin? This action cannot be undone.")) return;
+    try {
+      await globalAdminApi.softDelete(adminId);
+      fetchAdmins();
+    } catch (err: any) {
+      console.error("Failed to delete admin:", err.message);
+    }
+    setActiveRowActionMenuId(null);
+  };
+
   // ── Data Fetching ──────────────────────────────────────────
   const fetchDashboard = useCallback(async () => {
     try {
@@ -292,12 +329,88 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     }
   }, []);
 
+  const fetchMenu = useCallback(async () => {
+    try {
+      const res = await menuApi.list();
+      if (res.success && res.data) {
+        setMenuItems(res.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load menu:", err.message);
+    }
+  }, []);
+
+  const fetchPermissions = useCallback(async () => {
+    try {
+      const res = await permissionApi.list();
+      if (res.success && res.data) {
+        setPermissionsList(res.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load permissions:", err.message);
+    }
+  }, []);
+
+  const handleCreateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRole.name) return;
+    try {
+      await roleApi.create({ name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
+      fetchRoles();
+      setIsRoleModalOpen(false);
+      setNewRole({ name: "", description: "", permissionIds: [] });
+    } catch (err: any) {
+      console.error("Failed to create role:", err.message);
+    }
+  };
+
+  const handleUpdateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRole) return;
+    try {
+      await roleApi.update(editingRole.id, { name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
+      fetchRoles();
+      setIsRoleModalOpen(false);
+      setEditingRole(null);
+      setNewRole({ name: "", description: "", permissionIds: [] });
+    } catch (err: any) {
+      console.error("Failed to update role:", err.message);
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    if (!window.confirm("Delete this role? This cannot be undone.")) return;
+    try {
+      await roleApi.delete(roleId);
+      fetchRoles();
+    } catch (err: any) {
+      console.error("Failed to delete role:", err.message);
+    }
+  };
+
+  const handleAdminUpdateRole = async (adminId: string, roleId: string) => {
+    try {
+      await globalAdminApi.updateRole(adminId, { roleId });
+      fetchAdmins();
+    } catch (err: any) {
+      console.error("Failed to update admin role:", err.message);
+    }
+  };
+
   useEffect(() => {
     fetchDashboard();
     fetchEstates();
     fetchAdmins();
     fetchRoles();
-  }, [fetchDashboard, fetchEstates, fetchAdmins, fetchRoles]);
+    fetchMenu();
+    fetchPermissions();
+  }, [fetchDashboard, fetchEstates, fetchAdmins, fetchRoles, fetchMenu, fetchPermissions]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setActiveRowActionMenuId(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   const renderDashboardView = () => (
     <div className="space-y-6">
@@ -1317,7 +1430,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <div onClick={() => navigate("/admin/estates")} className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between hover:border-blue-400 cursor-pointer transition-colors group">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total Estates</span>
-                    <span className="text-2xl font-black text-slate-950 block mt-1">1,234</span>
+                    <span className="text-2xl font-black text-slate-950 block mt-1">{dashboardStats.totalEstates.toLocaleString()}</span>
                     <span className="text-[10px] text-emerald-600 font-bold mt-1 inline-flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded">
                       <TrendingUp className="h-3 w-3" /> +12%
                     </span>
@@ -1344,7 +1457,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <div onClick={() => navigate("/admin/residents")} className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between hover:border-blue-400 cursor-pointer transition-colors group">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Active Residents</span>
-                    <span className="text-2xl font-black text-slate-950 block mt-1">12,532</span>
+                    <span className="text-2xl font-black text-slate-950 block mt-1">{dashboardStats.totalResidents.toLocaleString()}</span>
                     <span className="text-[10px] text-emerald-600 font-bold mt-1 inline-flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded">
                       <TrendingUp className="h-3 w-3" /> +5%
                     </span>
@@ -1361,7 +1474,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <div className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between hover:border-blue-400 cursor-pointer transition-colors group">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">MRR</span>
-                    <span className="text-2xl font-black text-slate-950 block mt-1">₦1,234,355</span>
+                    <span className="text-2xl font-black text-slate-950 block mt-1">{dashboardStats.revenue}</span>
                     <span className="text-[10px] text-emerald-600 font-bold mt-1 inline-flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded">
                       <TrendingUp className="h-3 w-3" /> +5%
                     </span>
@@ -2166,25 +2279,25 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 
                 <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total Admin</span>
-                  <span className="text-2xl font-black text-slate-950 block mt-1">24</span>
+                  <span className="text-2xl font-black text-slate-950 block mt-1">{adminsList.length}</span>
                   <span className="text-[9.5px] text-gray-400 font-medium block mt-1">Active nationwide</span>
                 </div>
 
                 <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Super Admin</span>
-                  <span className="text-2xl font-black text-slate-950 block mt-1">24</span>
+                  <span className="text-2xl font-black text-slate-950 block mt-1">{adminsList.filter(a => a.role?.toLowerCase().includes("super")).length}</span>
                   <span className="text-[9.5px] text-gray-400 font-medium block mt-1">Full Platform Access</span>
                 </div>
 
                 <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Support Lead</span>
-                  <span className="text-2xl font-black text-slate-950 block mt-1">24</span>
+                  <span className="text-2xl font-black text-slate-950 block mt-1">{adminsList.filter(a => a.role?.toLowerCase().includes("support")).length}</span>
                   <span className="text-[9.5px] text-gray-400 font-medium block mt-1">Ticketing and user support</span>
                 </div>
 
                 <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Active Now</span>
-                  <span className="text-2xl font-black text-slate-950 block mt-1 font-mono">8</span>
+                  <span className="text-2xl font-black text-slate-950 block mt-1 font-mono">{adminsList.filter(a => a.status?.toLowerCase() === "active").length}</span>
                   <span className="text-[9.5px] text-emerald-600 font-bold block mt-1">● Currently online</span>
                 </div>
 
@@ -2227,14 +2340,107 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                           </td>
                           <td className="py-4 px-4 text-gray-400 font-medium font-mono">{adm.lastActivity}</td>
                           <td className="py-4 px-4 text-right">
-                            <button
-                              onClick={() => {
-                                alert(`Admin configurator triggered for ${adm.name}`);
-                              }}
-                              className="text-gray-400 hover:text-slate-900 p-1"
-                            >
-                              <MoreVertical className="h-4.5 w-4.5" />
-                            </button>
+                            <div className="relative">
+                              <button
+                                onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === `admin-${adm.id}` ? null : `admin-${adm.id}`)}
+                                className="text-gray-400 hover:text-slate-900 p-1 cursor-pointer"
+                              >
+                                <MoreVertical className="h-4.5 w-4.5" />
+                              </button>
+                              {activeRowActionMenuId === `admin-${adm.id}` && (
+                                <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                                  <div className="px-3 py-2 border-b border-gray-100">
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
+                                    <select
+                                      onChange={(e) => { if (e.target.value) handleAdminUpdateRole(adm.id, e.target.value); }}
+                                      className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
+                                      defaultValue=""
+                                    >
+                                      <option value="" disabled>Select role...</option>
+                                      {rolesList.map((r) => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAdminSuspend(adm.id)}
+                                    className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Ban className="h-3.5 w-3.5" /> Suspend
+                                  </button>
+                                  <button
+                                    onClick={() => handleAdminRestore(adm.id)}
+                                    className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5" /> Restore
+                                  </button>
+                                  <button
+                                    onClick={() => handleAdminSoftDelete(adm.id)}
+                                    className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Role Management Section */}
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                  <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">Roles</h3>
+                  <button
+                    onClick={() => { setEditingRole(null); setNewRole({ name: "", description: "", permissionIds: [] }); setIsRoleModalOpen(true); }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" /> Add Role
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-[10px] font-extrabold uppercase text-gray-400 bg-gray-50/20">
+                        <th className="py-3 px-4">Name</th>
+                        <th className="py-3 px-4">Description</th>
+                        <th className="py-3 px-4">Permissions</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rolesList.map((role) => (
+                        <tr key={role.id} className="border-b border-gray-50 hover:bg-slate-50">
+                          <td className="py-3 px-4 font-bold text-slate-900">{role.name}</td>
+                          <td className="py-3 px-4 text-gray-500">{role.description}</td>
+                          <td className="py-3 px-4">
+                            <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
+                              {role.permissions?.length || 0} permissions
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditingRole(role);
+                                  setNewRole({ name: role.name, description: role.description, permissionIds: role.permissions?.map(p => p.id) || [] });
+                                  setIsRoleModalOpen(true);
+                                }}
+                                className="text-gray-400 hover:text-blue-600 p-1 cursor-pointer"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRole(role.id)}
+                                className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2245,8 +2451,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
             </div>
           )}
-
-          {/* TAB 6: SUBSCRIBER PLANS */}
           {activeMenu === "plans" && (
             <div className="space-y-6 animate-fade-in text-slate-900">
               <div>
@@ -2966,6 +3170,97 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   className="flex-1 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all shadow-sm"
                 >
                   Authorize Operator
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ROLE CREATE/EDIT MODAL */}
+      {isRoleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-gray-200 shadow-2xl relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-650"
+              onClick={() => { setIsRoleModalOpen(false); setEditingRole(null); }}
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mb-5">
+              <span className="text-[10px] font-black bg-blue-50 text-blue-700 uppercase px-2 py-0.5 rounded block w-max font-mono">
+                {editingRole ? "Edit Role" : "Create Role"}
+              </span>
+              <h3 className="text-base font-black text-slate-950 mt-1">
+                {editingRole ? "Update Role Details" : "Add New Role"}
+              </h3>
+            </div>
+
+            <form onSubmit={editingRole ? handleUpdateRole : handleCreateRole} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Role Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Estate Manager"
+                  value={newRole.name}
+                  onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Description</label>
+                <input
+                  type="text"
+                  placeholder="Brief description of this role"
+                  value={newRole.description}
+                  onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Permissions</label>
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                  {permissionsList.length === 0 ? (
+                    <p className="text-[10px] text-gray-400 py-2 text-center">No permissions available</p>
+                  ) : (
+                    permissionsList.map((perm) => (
+                      <label key={perm.id} className="flex items-center gap-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newRole.permissionIds.includes(perm.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewRole({ ...newRole, permissionIds: [...newRole.permissionIds, perm.id] });
+                            } else {
+                              setNewRole({ ...newRole, permissionIds: newRole.permissionIds.filter(id => id !== perm.id) });
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-xs font-bold text-slate-700">{perm.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => { setIsRoleModalOpen(false); setEditingRole(null); }}
+                  className="flex-1 py-2 text-xs bg-gray-150 text-gray-700 hover:bg-gray-200 rounded-lg font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all shadow-sm"
+                >
+                  {editingRole ? "Update Role" : "Create Role"}
                 </button>
               </div>
             </form>

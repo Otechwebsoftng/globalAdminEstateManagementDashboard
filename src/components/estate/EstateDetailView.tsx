@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Users, Building2, ShieldCheck, UserCheck, Edit, Ban, Trash2, 
   MapPin, Phone, Mail, Clock, Plus, Search, ChevronRight, 
@@ -9,6 +9,8 @@ import {
   ResponsiveContainer, AreaChart, Area 
 } from "recharts";
 import { useAuth } from "../../context/AuthContext";
+import { estateApi, estateAdminApi, roleApi } from "../../services/api";
+import type { Resident, Admin, Role } from "../../types/api";
 
 interface EstateDetailViewProps {
   estate: any;
@@ -30,15 +32,15 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const auth = useAuth();
   const adminName = auth.user?.name || "Administrator";
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
+  const [activeAdminMenuId, setActiveAdminMenuId] = useState<string | null>(null);
 
-  // Mock data for internal tabs
-  const residentsList = [
-    { id: 1, name: "Chikwemedu Emmanuel", phone: "+234 803 587 6754", unit: "11B", status: "Active", joined: "Mar 14, 2026" },
-    { id: 2, name: "Chikwemedu Emmanuel", phone: "+234 803 587 6754", unit: "11B", status: "Active", joined: "Mar 14, 2026" },
-    { id: 3, name: "Chikwemedu Emmanuel", phone: "+234 803 587 6754", unit: "11B", status: "Active", joined: "Mar 14, 2026" },
-    { id: 4, name: "Chikwemedu Emmanuel", phone: "+234 803 587 6754", unit: "11B", status: "Active", joined: "Mar 14, 2026" },
-    { id: 5, name: "Chikwemedu Emmanuel", phone: "+234 803 587 6754", unit: "11B", status: "Active", joined: "Mar 14, 2026" },
-  ];
+  const [residentsList, setResidentsList] = useState<Resident[]>([]);
+  const [isResidentsLoading, setIsResidentsLoading] = useState(true);
+  const [estateAdminsList, setEstateAdminsList] = useState<Admin[]>([]);
+  const [isEstateAdminsLoading, setIsEstateAdminsLoading] = useState(true);
+  const [isOnboardAdminModalOpen, setIsOnboardAdminModalOpen] = useState(false);
+  const [newEstateAdmin, setNewEstateAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
+  const [rolesList, setRolesList] = useState<Role[]>([]);
 
   const securityStaff = [
     { id: 1, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
@@ -48,16 +50,123 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   ];
 
   const visitorLogs = [
-    { id: 1, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00PM, Today", status: "In", officer: "Officer Emmanuel" },
-    { id: 2, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, Tomorrow", status: "Expected", officer: "Officer Emmanuel" },
-    { id: 3, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, May 14, 2026", status: "Out", officer: "Officer Emmanuel" },
+    { id: 1, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00PM, Today", status: "In", officer: `Officer ${adminName}` },
+    { id: 2, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, Tomorrow", status: "Expected", officer: `Officer ${adminName}` },
+    { id: 3, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, May 14, 2026", status: "Out", officer: `Officer ${adminName}` },
   ];
 
-  const estateAdmins = [
-    { id: 1, name: "ADAM NAME", email: "youremail@gmail.com", role: "Estate Admin", status: "Active" },
-    { id: 2, name: "ADAM NAME", email: "youremail@gmail.com", role: "Finance", status: "Active" },
-    { id: 3, name: "ADAM NAME", email: "youremail@gmail.com", role: "Platform Masters", status: "Active" },
-  ];
+  const fetchEstateResidents = useCallback(async () => {
+    if (!estate?.id) return;
+    try {
+      setIsResidentsLoading(true);
+      const res = await estateApi.getResidents(estate.id);
+      if (res.success && res.data) {
+        setResidentsList(res.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load residents:", err.message);
+    } finally {
+      setIsResidentsLoading(false);
+    }
+  }, [estate?.id]);
+
+  const fetchEstateAdmins = useCallback(async () => {
+    if (!estate?.id) return;
+    try {
+      setIsEstateAdminsLoading(true);
+      const res = await estateAdminApi.list();
+      if (res.success && res.data) {
+        const estateSpecific = res.data.filter((a: any) => a.estateId === estate.id);
+        setEstateAdminsList(estateSpecific.length ? estateSpecific : res.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load estate admins:", err.message);
+    } finally {
+      setIsEstateAdminsLoading(false);
+    }
+  }, [estate?.id]);
+
+  useEffect(() => {
+    fetchEstateResidents();
+    fetchEstateAdmins();
+  }, [fetchEstateResidents, fetchEstateAdmins]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setActiveAdminMenuId(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  const handleEstateAdminSuspend = async (adminId: string) => {
+    if (!window.confirm("Suspend this estate admin?")) return;
+    try {
+      await estateAdminApi.suspend(adminId);
+      fetchEstateAdmins();
+    } catch (err: any) {
+      console.error("Failed to suspend estate admin:", err.message);
+    }
+  };
+
+  const handleEstateAdminRestore = async (adminId: string) => {
+    try {
+      await estateAdminApi.restore(adminId);
+      fetchEstateAdmins();
+    } catch (err: any) {
+      console.error("Failed to restore estate admin:", err.message);
+    }
+  };
+
+  const handleEstateAdminDelete = async (adminId: string) => {
+    if (!window.confirm("Delete this estate admin? This cannot be undone.")) return;
+    try {
+      await estateAdminApi.softDelete(adminId);
+      fetchEstateAdmins();
+    } catch (err: any) {
+      console.error("Failed to delete estate admin:", err.message);
+    }
+  };
+
+  const fetchRoles = useCallback(async () => {
+    try {
+      const res = await roleApi.list();
+      if (res.success && res.data) {
+        setRolesList(res.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load roles:", err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
+
+  const handleOnboardEstateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEstateAdmin.firstName || !newEstateAdmin.email) return;
+    try {
+      await estateAdminApi.onboard({
+        firstName: newEstateAdmin.firstName,
+        lastName: newEstateAdmin.lastName,
+        email: newEstateAdmin.email,
+        roleId: newEstateAdmin.roleId,
+      });
+      fetchEstateAdmins();
+      setIsOnboardAdminModalOpen(false);
+      setNewEstateAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
+    } catch (err: any) {
+      console.error("Failed to onboard estate admin:", err.message);
+    }
+  };
+
+  const handleEstateAdminUpdateRole = async (adminId: string, roleId: string) => {
+    try {
+      await estateAdminApi.updateRole(adminId, { roleId });
+      fetchEstateAdmins();
+    } catch (err: any) {
+      console.error("Failed to update estate admin role:", err.message);
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -240,41 +349,45 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                 </button>
               </div>
             </div>
+            {isResidentsLoading ? (
+              <div className="p-12 text-center text-xs text-gray-400">Loading residents...</div>
+            ) : residentsList.length === 0 ? (
+              <div className="p-12 text-center text-xs text-gray-400">No residents found for this estate.</div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-wider">
                     <th className="py-4 px-6">Resident Name</th>
+                    <th className="py-4 px-6">Email</th>
                     <th className="py-4 px-6">Phone</th>
-                    <th className="py-4 px-6 text-center">Unit</th>
+                    <th className="py-4 px-6 text-center">House No</th>
                     <th className="py-4 px-6">Status</th>
                     <th className="py-4 px-6">Date Joined</th>
-                    <th className="py-4 px-6 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {residentsList.map((res) => (
                     <tr key={res.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-bold text-slate-900">{res.name}</td>
-                      <td className="py-4 px-6 font-bold text-gray-500 font-mono">{res.phone}</td>
-                      <td className="py-4 px-6 text-center font-black text-blue-600">{res.unit}</td>
+                      <td className="py-4 px-6 font-bold text-slate-900">{res.firstName} {res.lastName}</td>
+                      <td className="py-4 px-6 font-bold text-gray-500">{res.email}</td>
+                      <td className="py-4 px-6 font-bold text-gray-500 font-mono">{res.phoneNumber}</td>
+                      <td className="py-4 px-6 text-center font-black text-blue-600">{res.houseNo}</td>
                       <td className="py-4 px-6">
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
                           <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />
-                          {res.status}
+                          {res.status || "Active"}
                         </span>
                       </td>
-                      <td className="py-4 px-6 font-bold text-gray-400">{res.joined}</td>
-                      <td className="py-4 px-6 text-right">
-                        <button className="text-gray-300 hover:text-slate-900 p-1">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                      <td className="py-4 px-6 font-bold text-gray-400">
+                        {res.createdAt ? new Date(res.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         );
 
@@ -397,39 +510,102 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
       case "admins":
         return (
-          <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-wider">
-                    <th className="py-4 px-6">Admin Name</th>
-                    <th className="py-4 px-6">Email Address</th>
-                    <th className="py-4 px-6">Role</th>
-                    <th className="py-4 px-6 text-center">Status</th>
-                    <th className="py-4 px-6 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {estateAdmins.map((adm) => (
-                    <tr key={adm.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-bold text-slate-900">{adm.name}</td>
-                      <td className="py-4 px-6 font-bold text-gray-500 font-mono">{adm.email}</td>
-                      <td className="py-4 px-6 font-bold text-indigo-600">{adm.role}</td>
-                      <td className="py-4 px-6 text-center">
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                          <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />
-                          {adm.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <button className="text-gray-300 hover:text-slate-900 p-1">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </td>
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-black text-slate-900">Estate Admins</h3>
+              <button
+                onClick={() => setIsOnboardAdminModalOpen(true)}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Estate Admin
+              </button>
+            </div>
+            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+              {isEstateAdminsLoading ? (
+                <div className="p-12 text-center text-xs text-gray-400">Loading admins...</div>
+              ) : estateAdminsList.length === 0 ? (
+                <div className="p-12 text-center text-xs text-gray-400">No admins found for this estate.</div>
+              ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                      <th className="py-4 px-6">Admin Name</th>
+                      <th className="py-4 px-6">Email Address</th>
+                      <th className="py-4 px-6">Role</th>
+                      <th className="py-4 px-6 text-center">Status</th>
+                      <th className="py-4 px-6 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {estateAdminsList.map((adm) => (
+                      <tr key={adm.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-6 font-bold text-slate-900">{adm.firstName} {adm.lastName}</td>
+                        <td className="py-4 px-6 font-bold text-gray-500 font-mono">{adm.email}</td>
+                        <td className="py-4 px-6 font-bold text-indigo-600">{adm.role?.name || "Admin"}</td>
+                        <td className="py-4 px-6 text-center">
+                          <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                            adm.status?.toLowerCase() === "active"
+                              ? "text-emerald-600 bg-emerald-50 border-emerald-100"
+                              : "text-amber-600 bg-amber-50 border-amber-100"
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${
+                              adm.status?.toLowerCase() === "active" ? "bg-emerald-500" : "bg-amber-500"
+                            }`} />
+                            {adm.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <div className="relative">
+                            <button
+                              onClick={() => setActiveAdminMenuId(activeAdminMenuId === adm.id ? null : adm.id)}
+                              className="text-gray-300 hover:text-slate-900 p-1 cursor-pointer"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                            {activeAdminMenuId === adm.id && (
+                              <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                                <div className="px-3 py-2 border-b border-gray-100">
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
+                                  <select
+                                    onChange={(e) => { if (e.target.value) { handleEstateAdminUpdateRole(adm.id, e.target.value); setActiveAdminMenuId(null); } }}
+                                    className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
+                                    defaultValue=""
+                                  >
+                                    <option value="" disabled>Select role...</option>
+                                    {rolesList.map((r) => (
+                                      <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <button
+                                  onClick={() => { handleEstateAdminSuspend(adm.id); setActiveAdminMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 cursor-pointer"
+                                >
+                                  Suspend
+                                </button>
+                                <button
+                                  onClick={() => { handleEstateAdminRestore(adm.id); setActiveAdminMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                                >
+                                  Restore
+                                </button>
+                                <button
+                                  onClick={() => { handleEstateAdminDelete(adm.id); setActiveAdminMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              )}
             </div>
           </div>
         );
@@ -556,6 +732,98 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       <div className="min-h-[500px]">
         {renderTabContent()}
       </div>
+
+      {/* ONBOARD ESTATE ADMIN MODAL */}
+      {isOnboardAdminModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-gray-200 shadow-2xl relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              onClick={() => setIsOnboardAdminModalOpen(false)}
+            >
+              <span className="text-lg">&times;</span>
+            </button>
+
+            <div className="mb-5">
+              <span className="text-[10px] font-black bg-blue-50 text-blue-700 uppercase px-2 py-0.5 rounded block w-max font-mono">
+                Estate Admin Onboarding
+              </span>
+              <h3 className="text-base font-black text-slate-950 mt-1">
+                Add New Estate Admin
+              </h3>
+            </div>
+
+            <form onSubmit={handleOnboardEstateAdmin} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Chinedu"
+                    value={newEstateAdmin.firstName}
+                    onChange={(e) => setNewEstateAdmin({ ...newEstateAdmin, firstName: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Okafor"
+                    value={newEstateAdmin.lastName}
+                    onChange={(e) => setNewEstateAdmin({ ...newEstateAdmin, lastName: e.target.value })}
+                    className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. chinedu@estate.ng"
+                  value={newEstateAdmin.email}
+                  onChange={(e) => setNewEstateAdmin({ ...newEstateAdmin, email: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Role</label>
+                <select
+                  value={newEstateAdmin.roleId}
+                  onChange={(e) => setNewEstateAdmin({ ...newEstateAdmin, roleId: e.target.value })}
+                  className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                >
+                  <option value="">Select Role</option>
+                  {rolesList.map((role) => (
+                    <option key={role.id} value={role.id}>{role.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsOnboardAdminModalOpen(false)}
+                  className="flex-1 py-2 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all shadow-sm"
+                >
+                  Onboard Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
