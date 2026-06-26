@@ -9,6 +9,7 @@ import {
   ResponsiveContainer, AreaChart, Area 
 } from "recharts";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../Toast";
 import { estateApi, estateAdminApi, roleApi } from "../../services/api";
 import type { Resident, Admin, Role } from "../../types/api";
 
@@ -30,6 +31,7 @@ const visitorTrendData = [
 
 export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetailViewProps) {
   const auth = useAuth();
+  const { showToast } = useToast();
   const adminName = auth.user?.name || "Administrator";
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
   const [activeAdminMenuId, setActiveAdminMenuId] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         setResidentsList(res.data);
       }
     } catch (err: any) {
-      console.error("Failed to load residents:", err.message);
+      showToast(err.message || "Failed to load residents");
     } finally {
       setIsResidentsLoading(false);
     }
@@ -80,7 +82,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         setEstateAdminsList(estateSpecific.length ? estateSpecific : res.data);
       }
     } catch (err: any) {
-      console.error("Failed to load estate admins:", err.message);
+      showToast(err.message || "Failed to load estate admins");
     } finally {
       setIsEstateAdminsLoading(false);
     }
@@ -103,7 +105,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       await estateAdminApi.suspend(adminId);
       fetchEstateAdmins();
     } catch (err: any) {
-      console.error("Failed to suspend estate admin:", err.message);
+      showToast(err.message || "Failed to suspend estate admin");
     }
   };
 
@@ -112,7 +114,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       await estateAdminApi.restore(adminId);
       fetchEstateAdmins();
     } catch (err: any) {
-      console.error("Failed to restore estate admin:", err.message);
+      showToast(err.message || "Failed to restore estate admin");
     }
   };
 
@@ -122,7 +124,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       await estateAdminApi.softDelete(adminId);
       fetchEstateAdmins();
     } catch (err: any) {
-      console.error("Failed to delete estate admin:", err.message);
+      showToast(err.message || "Failed to delete estate admin");
     }
   };
 
@@ -133,7 +135,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         setRolesList(res.data);
       }
     } catch (err: any) {
-      console.error("Failed to load roles:", err.message);
+      showToast(err.message || "Failed to load roles");
     }
   }, []);
 
@@ -155,7 +157,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       setIsOnboardAdminModalOpen(false);
       setNewEstateAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
     } catch (err: any) {
-      console.error("Failed to onboard estate admin:", err.message);
+      showToast(err.message || "Failed to onboard estate admin");
     }
   };
 
@@ -164,7 +166,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       await estateAdminApi.updateRole(adminId, { roleId });
       fetchEstateAdmins();
     } catch (err: any) {
-      console.error("Failed to update estate admin role:", err.message);
+      showToast(err.message || "Failed to update estate admin role");
     }
   };
 

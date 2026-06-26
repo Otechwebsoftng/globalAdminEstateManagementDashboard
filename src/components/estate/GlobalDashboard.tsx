@@ -10,8 +10,10 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import EstateDetailView from "./EstateDetailView";
 import ResidentDetailView from "./ResidentDetailView";
+import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../Toast";
 import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi } from "../../services/api";
 import type { Estate, Resident, Admin, Role, MenuItem, Permission } from "../../types/api";
 
@@ -37,6 +39,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const auth = useAuth();
+  const { showToast } = useToast();
   
   const adminName = auth.user?.name || "Administrator";
   
@@ -90,6 +93,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     city: "Lagos",
     tier: "ENTERPRISE"
   });
+  const [sendLoginDetails, setSendLoginDetails] = useState(true);
 
   // Residents State
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -153,16 +157,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!newEstate.name || !newEstate.email) return;
 
     try {
-      const nameParts = newEstate.name.split(" ");
+      const ownerParts = newEstate.owner.split(" ");
       const response = await estateApi.onboard({
         estateName: newEstate.name,
-        firstName: nameParts[0] || "",
-        lastName: nameParts.slice(1).join(" ") || "",
-        cac: "",
+        firstName: ownerParts[0] || "",
+        lastName: ownerParts.slice(1).join(" ") || "",
+        cac: "N/A",
         countryCode: "+234",
-        phoneNumber: newEstate.phone,
+        phoneNumber: newEstate.phone || "0000000000",
         email: newEstate.email,
-        address: newEstate.address,
+        address: newEstate.address || "N/A",
         city: newEstate.city,
         state: "Lagos",
         country: "Nigeria",
@@ -171,11 +175,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         fetchEstates();
       }
     } catch (err: any) {
-      console.error("Failed to onboard estate:", err.message);
+      showToast(err.message || "Failed to onboard estate");
     }
 
     setIsOnboardModalOpen(false);
     setNewEstate({ name: "", owner: "", email: "", phone: "", address: "", city: "Lagos", tier: "ENTERPRISE" });
+    setSendLoginDetails(true);
   };
 
   const handleEditEstateSubmit = async (e: React.FormEvent) => {
@@ -193,7 +198,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       });
       fetchEstates();
     } catch (err: any) {
-      console.error("Failed to update estate:", err.message);
+      showToast(err.message || "Failed to update estate");
     }
     setIsEditModalOpen(false);
     setEditingEstate(null);
@@ -215,7 +220,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       });
       fetchAdmins();
     } catch (err: any) {
-      console.error("Failed to onboard admin:", err.message);
+      showToast(err.message || "Failed to onboard admin");
     }
 
     setIsAdminModalOpen(false);
@@ -228,7 +233,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       await globalAdminApi.suspend(adminId);
       fetchAdmins();
     } catch (err: any) {
-      console.error("Failed to suspend admin:", err.message);
+      showToast(err.message || "Failed to suspend admin");
     }
     setActiveRowActionMenuId(null);
   };
@@ -238,7 +243,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       await globalAdminApi.restore(adminId);
       fetchAdmins();
     } catch (err: any) {
-      console.error("Failed to restore admin:", err.message);
+      showToast(err.message || "Failed to restore admin");
     }
     setActiveRowActionMenuId(null);
   };
@@ -249,7 +254,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       await globalAdminApi.softDelete(adminId);
       fetchAdmins();
     } catch (err: any) {
-      console.error("Failed to delete admin:", err.message);
+      showToast(err.message || "Failed to delete admin");
     }
     setActiveRowActionMenuId(null);
   };
@@ -269,7 +274,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         });
       }
     } catch (err: any) {
-      console.error("Failed to load dashboard:", err.message);
+      showToast(err.message || "Failed to load dashboard");
     } finally {
       setIsDashboardLoading(false);
     }
@@ -292,7 +297,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         setEstates(mapped);
       }
     } catch (err: any) {
-      console.error("Failed to load estates:", err.message);
+      showToast(err.message || "Failed to load estates");
     } finally {
       setIsEstatesLoading(false);
     }
@@ -312,7 +317,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         setAdminsList(mapped);
       }
     } catch (err: any) {
-      console.error("Failed to load admins:", err.message);
+      showToast(err.message || "Failed to load admins");
     } finally {
       setIsAdminsLoading(false);
     }
@@ -325,7 +330,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         setRolesList(res.data);
       }
     } catch (err: any) {
-      console.error("Failed to load roles:", err.message);
+      showToast(err.message || "Failed to load roles");
     }
   }, []);
 
@@ -336,7 +341,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         setMenuItems(res.data);
       }
     } catch (err: any) {
-      console.error("Failed to load menu:", err.message);
+      showToast(err.message || "Failed to load menu");
     }
   }, []);
 
@@ -347,7 +352,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         setPermissionsList(res.data);
       }
     } catch (err: any) {
-      console.error("Failed to load permissions:", err.message);
+      showToast(err.message || "Failed to load permissions");
     }
   }, []);
 
@@ -360,7 +365,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       setIsRoleModalOpen(false);
       setNewRole({ name: "", description: "", permissionIds: [] });
     } catch (err: any) {
-      console.error("Failed to create role:", err.message);
+      showToast(err.message || "Failed to create role");
     }
   };
 
@@ -374,7 +379,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       setEditingRole(null);
       setNewRole({ name: "", description: "", permissionIds: [] });
     } catch (err: any) {
-      console.error("Failed to update role:", err.message);
+      showToast(err.message || "Failed to update role");
     }
   };
 
@@ -384,7 +389,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       await roleApi.delete(roleId);
       fetchRoles();
     } catch (err: any) {
-      console.error("Failed to delete role:", err.message);
+      showToast(err.message || "Failed to delete role");
     }
   };
 
@@ -393,7 +398,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       await globalAdminApi.updateRole(adminId, { roleId });
       fetchAdmins();
     } catch (err: any) {
-      console.error("Failed to update admin role:", err.message);
+      showToast(err.message || "Failed to update admin role");
     }
   };
 
@@ -428,6 +433,15 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isDashboardLoading ? (
+          <>
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+          </>
+        ) : (
+        <>
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:border-blue-200 transition-colors cursor-default group">
           <div className="flex justify-between items-start mb-4">
             <div className="h-10 w-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -479,6 +493,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           <span className="text-2xl font-black text-slate-900 block leading-none">{dashboardStats.revenue}</span>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">Revenue</span>
         </div>
+        </>
+        )}
       </div>
 
       {/* Recent Activity and Charts */}
@@ -606,7 +622,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {estates.map((estate) => (
+              {isEstatesLoading ? (
+                <tr><td colSpan={7} className="py-12"><TableSkeleton rows={5} cols={7} /></td></tr>
+              ) : estates.map((estate) => (
                 <tr key={estate.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6 font-bold text-slate-900">{estate.name}</td>
                   <td className="py-4 px-6 font-bold text-gray-500">{estate.owner}</td>
@@ -917,7 +935,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {adminsList.map((admin) => (
+              {isAdminsLoading ? (
+                <tr><td colSpan={6} className="py-12"><TableSkeleton rows={5} cols={6} /></td></tr>
+              ) : adminsList.map((admin) => (
                 <tr key={admin.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6 font-bold text-slate-900">{admin.name}</td>
                   <td className="py-4 px-6 font-bold text-gray-500 font-mono">{admin.email}</td>
@@ -2642,7 +2662,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     <div className="relative flex-1">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                       <input 
-                        type="text" placeholder="803 - 533 - 5432" value={newEstate.phone}
+                        type="text" required placeholder="803 - 533 - 5432" value={newEstate.phone}
                         onChange={(e) => setNewEstate({...newEstate, phone: e.target.value})}
                         className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
                       />
@@ -2694,9 +2714,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center cursor-pointer">
-                  <Check className="h-3.5 w-3.5 text-white stroke-[4]" />
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSendLoginDetails(!sendLoginDetails)}>
+                <div className={`h-5 w-5 rounded flex items-center justify-center transition-colors ${sendLoginDetails ? "bg-blue-600" : "bg-gray-200 border border-gray-300"}`}>
+                  {sendLoginDetails && <Check className="h-3.5 w-3.5 text-white stroke-[4]" />}
                 </div>
                 <span className="text-[11px] font-bold text-slate-500">Send login details to admin email</span>
               </div>
