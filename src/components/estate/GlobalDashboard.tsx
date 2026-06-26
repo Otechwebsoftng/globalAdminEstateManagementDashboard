@@ -427,7 +427,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   }, [fetchDashboard, fetchEstates, fetchAdmins, fetchRoles, fetchMenu, fetchPermissions]);
 
   useEffect(() => {
-    const handleClickOutside = () => setActiveRowActionMenuId(null);
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-dropdown]') || target.closest('[data-dropdown-trigger]')) return;
+      setActiveRowActionMenuId(null);
+    };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
@@ -892,7 +896,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </td>
                   <td className="py-4 px-6 font-bold text-gray-400">{staff.added}</td>
                   <td className="py-4 px-6 text-right">
-                    <button className="text-gray-300 hover:text-slate-900 p-1">
+                    <button className="text-gray-300 hover:text-slate-900 p-1 cursor-not-allowed" title="No staff management available">
                       <MoreVertical className="h-4 w-4" />
                     </button>
                   </td>
@@ -964,13 +968,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <td className="py-4 px-6 text-right">
                     <div className="relative">
                       <button
+                        data-dropdown-trigger
                         onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === `list-admin-${admin.id}` ? null : `list-admin-${admin.id}`)}
                         className="text-gray-300 hover:text-slate-900 p-1 cursor-pointer"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </button>
                       {activeRowActionMenuId === `list-admin-${admin.id}` && (
-                        <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                        <div data-dropdown className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
                           <div className="px-3 py-2 border-b border-gray-100">
                             <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
                             <select
@@ -1717,6 +1722,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                               onClick={() => {
                                 alert(`Opening command config parameters for ${est.name}`);
                               }}
+                              data-dropdown-trigger
                               className="text-gray-400 hover:text-slate-900 transition-colors p-1"
                             >
                               <MoreVertical className="h-4 w-4" />
@@ -1830,13 +1836,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                             <td className="py-4 px-6 text-right relative">
                               <button 
                                 onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === est.id ? null : est.id)}
+                                data-dropdown-trigger
                                 className="text-gray-300 hover:text-slate-900 p-1"
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </button>
 
                               {activeRowActionMenuId === est.id && (
-                                <div className="absolute right-12 top-10 w-40 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 text-left overflow-hidden py-1.5 ring-4 ring-slate-50">
+                                <div data-dropdown className="absolute right-12 top-10 w-40 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 text-left overflow-hidden py-1.5 ring-4 ring-slate-50">
                                   <button
                                     onClick={() => { setSelectedEstateId(est.id); setActiveRowActionMenuId(null); }}
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
@@ -1851,10 +1858,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                     <Edit className="h-3.5 w-3.5 text-amber-600" />
                                     <span>Edit Estate</span>
                                   </button>
-                                  <button className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50 border-t border-gray-50 mt-1">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    <span>Delete Estate</span>
-                                  </button>
+
                                 </div>
                               )}
                             </td>
@@ -1977,13 +1981,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                             <td className="py-4 px-6 text-right relative">
                               <button 
                                 onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === res.id ? null : res.id)}
+                                data-dropdown-trigger
                                 className="text-gray-300 hover:text-slate-900 p-1"
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </button>
 
                               {activeRowActionMenuId === res.id && (
-                                <div className="absolute right-12 top-10 w-44 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 text-left overflow-hidden py-1.5 ring-4 ring-slate-50">
+                                <div data-dropdown className="absolute right-12 top-10 w-44 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 text-left overflow-hidden py-1.5 ring-4 ring-slate-50">
                                   <button
                                     onClick={() => { setSelectedResidentId(res.id); setActiveRowActionMenuId(null); }}
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
@@ -2415,12 +2420,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                             <div className="relative">
                               <button
                                 onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === `admin-${adm.id}` ? null : `admin-${adm.id}`)}
+                                data-dropdown-trigger
                                 className="text-gray-400 hover:text-slate-900 p-1 cursor-pointer"
                               >
                                 <MoreVertical className="h-4.5 w-4.5" />
                               </button>
                               {activeRowActionMenuId === `admin-${adm.id}` && (
-                                <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                                <div data-dropdown className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
                                   <div className="px-3 py-2 border-b border-gray-100">
                                     <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
                                     <select
@@ -3337,7 +3343,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                           }}
                           className="rounded"
                         />
-                        <span className="text-xs font-bold text-slate-700">{perm.name}</span>
+                        <span className="text-xs font-bold text-slate-700">{perm.name || perm.slug || perm.description || "Permission"}</span>
                       </label>
                     ))
                   )}

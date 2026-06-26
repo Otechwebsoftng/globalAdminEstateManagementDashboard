@@ -96,7 +96,11 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   }, [fetchEstateResidents, fetchEstateAdmins]);
 
   useEffect(() => {
-    const handleClickOutside = () => setActiveAdminMenuId(null);
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-dropdown]') || target.closest('[data-dropdown-trigger]')) return;
+      setActiveAdminMenuId(null);
+    };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
@@ -445,7 +449,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button className="text-gray-300 hover:text-slate-900 p-1">
+                        <button className="text-gray-300 hover:text-slate-900 p-1 cursor-not-allowed" title="No resident management available">
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       </td>
@@ -569,12 +573,13 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                           <div className="relative">
                             <button
                               onClick={() => setActiveAdminMenuId(activeAdminMenuId === adm.id ? null : adm.id)}
+                              data-dropdown-trigger
                               className="text-gray-300 hover:text-slate-900 p-1 cursor-pointer"
                             >
                               <MoreVertical className="h-4 w-4" />
                             </button>
                             {activeAdminMenuId === adm.id && (
-                              <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                              <div data-dropdown className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
                                 <div className="px-3 py-2 border-b border-gray-100">
                                   <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
                                   <select
