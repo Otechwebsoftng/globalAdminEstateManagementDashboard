@@ -182,6 +182,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       for (const key of keys) {
         if (Array.isArray(res.data?.[key])) return res.data[key];
       }
+      for (const innerKey of Object.keys(res.data)) {
+        if (Array.isArray(res.data[innerKey])) return res.data[innerKey];
+      }
     }
     if (Array.isArray(res)) return res;
     return [];
@@ -244,7 +247,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   }, [estatesRaw]);
 
   const adminsList: AdminRow[] = useMemo(() => {
-    const raw = parseList(adminsRaw, "admins", "result");
+    const raw = parseList(adminsRaw, "admins", "users", "result");
     return raw.map((a: any) => ({
       ...a,
       name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
