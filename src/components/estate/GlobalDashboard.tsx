@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2, 
   MapPin, Clock, DollarSign, Send, ClipboardList, Menu, X, CheckSquare, 
@@ -15,7 +16,28 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
 import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi } from "../../services/api";
+import { queryClient } from "../../lib/queryClient";
 import type { Estate, Resident, Admin, Role, MenuItem, Permission } from "../../types/api";
+
+interface EstateRow extends Estate {
+  name: string;
+  owner: string;
+  phone: string;
+  tier: string;
+  status: string;
+  date: string;
+}
+
+interface AdminRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+  lastActivity: string;
+}
 
 interface GlobalDashboardProps {}
 
@@ -56,15 +78,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     return validMenus.includes(menuFromPath) ? menuFromPath as typeof validMenus[number] : "dashboard";
   }, [location.pathname]);
 
-  // Dashboard summary data
-  const [dashboardStats, setDashboardStats] = useState({
-    totalEstates: 0,
-    totalResidents: 0,
-    totalStaff: 0,
-    revenue: "₦0",
-    recentActivity: [] as Array<{ id: string | number; action: string; estate: string; time: string }>
-  });
-  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
+  // Dashboard summary data — derived from useQuery below
 
   // Sidebar Estate Management collapsible state
   const [isEstateMenuExpanded, setIsEstateMenuExpanded] = useState(true);
@@ -78,9 +92,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   // Active Admin Actions Popover row ID tracking
   const [activeRowActionMenuId, setActiveRowActionMenuId] = useState<string | null>(null);
 
-  // Estates Database State
-  const [estates, setEstates] = useState<Estate[]>([]);
-  const [isEstatesLoading, setIsEstatesLoading] = useState(true);
+  // Estates Database State — derived from useQuery below
 
   // State to manage Onboard Estate Modal input - matches frame 1618686559/1618686560
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
@@ -116,11 +128,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // Staff, Admin, Resident state
   const [staffList, setStaffList] = useState<any[]>([]);
-  const [adminsList, setAdminsList] = useState<Admin[]>([]);
-  const [isAdminsLoading, setIsAdminsLoading] = useState(true);
-  const [rolesList, setRolesList] = useState<Role[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [permissionsList, setPermissionsList] = useState<Permission[]>([]);
+  // adminsList derived from useQuery below
+  // rolesList derived from useQuery below
+  // menuItems derived from useQuery below
+  // permissionsList derived from useQuery below
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [newRole, setNewRole] = useState({ name: "", description: "", permissionIds: [] as string[] });
@@ -151,14 +162,102 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     setEditingResident(null);
   };
 
-  // Onboard Estate function
+  // ── React Query ──────────────────────────────────────────
+  const qk = {
+    dashboard: ["dashboard"] as const,
+    estates: ["estates"] as const,
+    admins: ["admins"] as const,
+    roles: ["roles"] as const,
+    menu: ["menu"] as const,
+    permissions: ["permissions"] as const,
+  };
+
+  const parseList = (res: any, ...keys: string[]): any[] => {
+    for (const key of keys) {
+      if (Array.isArray(res?.[key])) return res[key];
+    }
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res)) return res;
+    return [];
+  };
+
+  const { data: dashboardRaw, isLoading: isDashboardLoading } = useQuery({
+    queryKey: qk.dashboard,
+    queryFn: () => globalAdminApi.getDashboard(),
+  });
+
+  const { data: estatesRaw, isLoading: isEstatesLoading } = useQuery({
+    queryKey: qk.estates,
+    queryFn: () => estateApi.list(),
+  });
+
+  const { data: adminsRaw, isLoading: isAdminsLoading } = useQuery({
+    queryKey: qk.admins,
+    queryFn: () => globalAdminApi.list(),
+  });
+
+  const { data: rolesRaw } = useQuery({
+    queryKey: qk.roles,
+    queryFn: () => roleApi.list(),
+  });
+
+  const { data: menuRaw } = useQuery({
+    queryKey: qk.menu,
+    queryFn: () => menuApi.list(),
+  });
+
+  const { data: permissionsRaw } = useQuery({
+    queryKey: qk.permissions,
+    queryFn: () => permissionApi.list(),
+  });
+
+  // ── Derived data from cache ──────────────────────────────
+  const dashboardStats = useMemo(() => {
+    const d: any = dashboardRaw?.data ?? dashboardRaw;
+    return {
+      totalEstates: d?.totalEstates || 0,
+      totalResidents: d?.totalResidents || 0,
+      totalStaff: d?.totalStaff || 0,
+      revenue: d?.revenue || "₦0",
+      recentActivity: d?.recentActivity || [],
+    };
+  }, [dashboardRaw]);
+
+  const estates: EstateRow[] = useMemo(() => {
+    const raw = parseList(estatesRaw, "estates", "result");
+    if (raw.length === 0) return [];
+    return raw.map((e: any) => ({
+      ...e,
+      name: e.estateName || e.name || "",
+      owner: `${e.firstName || ""} ${e.lastName || ""}`.trim(),
+      phone: `${e.countryCode || ""}${e.phoneNumber || ""}`,
+      tier: "ENTERPRISE",
+      status: e.status || "Active",
+      date: e.createdAt ? new Date(e.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "",
+    }));
+  }, [estatesRaw]);
+
+  const adminsList: AdminRow[] = useMemo(() => {
+    const raw = parseList(adminsRaw, "admins", "result");
+    return raw.map((a: any) => ({
+      ...a,
+      name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
+      role: a.role?.name || a.roleName || "Admin",
+      lastActivity: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
+    }));
+  }, [adminsRaw]);
+
+  const rolesList: Role[] = useMemo(() => parseList(rolesRaw, "roles", "result"), [rolesRaw]);
+  const menuItems: MenuItem[] = useMemo(() => parseList(menuRaw, "menus", "result"), [menuRaw]);
+  const permissionsList: Permission[] = useMemo(() => parseList(permissionsRaw, "permissions", "result"), [permissionsRaw]);
+
+  // ── Mutations with cache invalidation ────────────────────
   const handleOnboardEstateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEstate.name || !newEstate.email) return;
-
     try {
       const ownerParts = newEstate.owner.split(" ");
-      const response = await estateApi.onboard({
+      await estateApi.onboard({
         estateName: newEstate.name,
         firstName: ownerParts[0] || "",
         lastName: ownerParts.slice(1).join(" ") || "",
@@ -171,11 +270,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         state: "Lagos",
         country: "Nigeria",
       });
-      fetchEstates();
+      queryClient.invalidateQueries({ queryKey: qk.estates });
+      showToast("Estate onboarded successfully");
     } catch (err: any) {
       showToast(err.message || "Failed to onboard estate");
     }
-
     setIsOnboardModalOpen(false);
     setNewEstate({ name: "", owner: "", email: "", phone: "", address: "", city: "Lagos", tier: "ENTERPRISE" });
     setSendLoginDetails(true);
@@ -194,7 +293,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         state: editingEstate.state || "Lagos",
         country: editingEstate.country || "Nigeria",
       });
-      fetchEstates();
+      queryClient.invalidateQueries({ queryKey: qk.estates });
+      showToast("Estate updated successfully");
     } catch (err: any) {
       showToast(err.message || "Failed to update estate");
     }
@@ -202,11 +302,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     setEditingEstate(null);
   };
 
-  // Add new admin function
   const handleAddAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAdmin.firstName || !newAdmin.email || !newAdmin.roleId) return;
-
     try {
       await globalAdminApi.onboard({
         firstName: newAdmin.firstName,
@@ -216,12 +314,15 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         phoneNumber: newAdmin.phoneNumber || "0000000000",
         roleId: newAdmin.roleId,
       });
-      fetchAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.admins });
       showToast("Admin onboarded successfully");
     } catch (err: any) {
-      showToast(err.message || "Failed to onboard admin");
+      if (err.status === 409) {
+        showToast("An admin with this email already exists. Please use a different email.");
+      } else {
+        showToast(err.message || "Failed to onboard admin");
+      }
     }
-
     setIsAdminModalOpen(false);
     setNewAdmin({ firstName: "", lastName: "", email: "", roleId: "", phoneNumber: "" });
   };
@@ -230,7 +331,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!window.confirm("Are you sure you want to suspend this admin?")) return;
     try {
       await globalAdminApi.suspend(adminId);
-      fetchAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.admins });
       showToast("Admin suspended");
     } catch (err: any) {
       showToast(err.message || "Failed to suspend admin");
@@ -241,7 +342,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const handleAdminRestore = async (adminId: string) => {
     try {
       await globalAdminApi.restore(adminId);
-      fetchAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.admins });
       showToast("Admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore admin");
@@ -253,7 +354,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!window.confirm("Are you sure you want to delete this admin? This action cannot be undone.")) return;
     try {
       await globalAdminApi.softDelete(adminId);
-      fetchAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.admins });
       showToast("Admin deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete admin");
@@ -261,118 +362,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     setActiveRowActionMenuId(null);
   };
 
-  // ── Data Fetching ──────────────────────────────────────────
-  const fetchDashboard = useCallback(async () => {
-    try {
-      setIsDashboardLoading(true);
-      const res: any = await globalAdminApi.getDashboard();
-      const d = res?.data ?? res?.dashboard ?? res;
-      if (d) {
-        setDashboardStats({
-          totalEstates: d.totalEstates || 0,
-          totalResidents: d.totalResidents || 0,
-          totalStaff: d.totalStaff || 0,
-          revenue: d.revenue || "₦0",
-          recentActivity: d.recentActivity || [],
-        });
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load dashboard");
-    } finally {
-      setIsDashboardLoading(false);
-    }
-  }, []);
-
-  const fetchEstates = useCallback(async () => {
-    try {
-      setIsEstatesLoading(true);
-      const res: any = await estateApi.list();
-      // Handle multiple possible response shapes from backend
-      const raw = res?.data ?? res?.estates ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw) && raw.length > 0) {
-        const mapped = raw.map((e: any) => ({
-          ...e,
-          name: e.estateName || e.name || "",
-          owner: `${e.firstName || ""} ${e.lastName || ""}`.trim(),
-          phone: `${e.countryCode || ""}${e.phoneNumber || ""}`,
-          tier: "ENTERPRISE",
-          status: e.status || "Active",
-          date: e.createdAt ? new Date(e.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "",
-        }));
-        setEstates(mapped);
-      } else {
-        setEstates([]);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load estates");
-    } finally {
-      setIsEstatesLoading(false);
-    }
-  }, []);
-
-  const fetchAdmins = useCallback(async () => {
-    try {
-      setIsAdminsLoading(true);
-      const res: any = await globalAdminApi.list();
-      const raw = res?.data ?? res?.admins ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        const mapped = raw.map((a: any) => ({
-          ...a,
-          name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
-          role: a.role?.name || a.roleName || "Admin",
-          lastActivity: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
-        }));
-        setAdminsList(mapped);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load admins");
-    } finally {
-      setIsAdminsLoading(false);
-    }
-  }, []);
-
-  const fetchRoles = useCallback(async () => {
-    try {
-      const res: any = await roleApi.list();
-      const raw = res?.data ?? res?.roles ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        setRolesList(raw);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load roles");
-    }
-  }, []);
-
-  const fetchMenu = useCallback(async () => {
-    try {
-      const res: any = await menuApi.list();
-      const raw = res?.data ?? res?.menus ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        setMenuItems(raw);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load menu");
-    }
-  }, []);
-
-  const fetchPermissions = useCallback(async () => {
-    try {
-      const res: any = await permissionApi.list();
-      const raw = res?.data ?? res?.permissions ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        setPermissionsList(raw);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load permissions");
-    }
-  }, []);
-
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRole.name) return;
     try {
       await roleApi.create({ name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
-      fetchRoles();
+      queryClient.invalidateQueries({ queryKey: qk.roles });
       showToast("Role created successfully");
       setIsRoleModalOpen(false);
       setNewRole({ name: "", description: "", permissionIds: [] });
@@ -386,7 +381,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!editingRole) return;
     try {
       await roleApi.update(editingRole.id, { name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
-      fetchRoles();
+      queryClient.invalidateQueries({ queryKey: qk.roles });
       showToast("Role updated successfully");
       setIsRoleModalOpen(false);
       setEditingRole(null);
@@ -400,7 +395,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!window.confirm("Delete this role? This cannot be undone.")) return;
     try {
       await roleApi.delete(roleId);
-      fetchRoles();
+      queryClient.invalidateQueries({ queryKey: qk.roles });
       showToast("Role deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete role");
@@ -410,21 +405,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const handleAdminUpdateRole = async (adminId: string, roleId: string) => {
     try {
       await globalAdminApi.updateRole(adminId, { roleId });
-      fetchAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.admins });
       showToast("Admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update admin role");
     }
   };
-
-  useEffect(() => {
-    fetchDashboard();
-    fetchEstates();
-    fetchAdmins();
-    fetchRoles();
-    fetchMenu();
-    fetchPermissions();
-  }, [fetchDashboard, fetchEstates, fetchAdmins, fetchRoles, fetchMenu, fetchPermissions]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -927,7 +913,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       </div>
 
       {/* Admins Table */}
-      <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm">
         <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-slate-50/30">
           <div className="relative w-64">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
@@ -1789,7 +1775,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 </div>
 
                 {/* Estates Table precisely matched to image column structure */}
-                <div className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-sm">
+                <div className="bg-white rounded-2xl border border-gray-150 shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
@@ -1940,7 +1926,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 </div>
 
                 {/* Residents Table precisely matched to image column structure */}
-                <div className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-sm">
+                <div className="bg-white rounded-2xl border border-gray-150 shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
@@ -2270,6 +2256,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                 onClick={() => {
                                   setActiveRowActionMenuId(activeRowActionMenuId === st.id ? null : st.id);
                                 }}
+                                data-dropdown-trigger
                                 className="p-1 px-2.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-slate-900 transition-colors inline-flex cursor-pointer"
                               >
                                 <span className="text-sm font-black tracking-widest">•••</span>
@@ -2277,7 +2264,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                               {/* Dropdown Action Popover strictly matched to visual style */}
                               {activeRowActionMenuId === st.id && (
-                                <div className="absolute right-6 top-10 w-36 bg-white border border-gray-200 rounded-xl shadow-xl z-30 text-left overflow-hidden py-1">
+                                <div data-dropdown className="absolute right-6 top-10 w-36 bg-white border border-gray-200 rounded-xl shadow-xl z-30 text-left overflow-hidden py-1">
                                   <button
                                     onClick={() => {
                                       setSelectedStaff(st);
@@ -2381,7 +2368,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               {/* Admins Table Container strictly style matched */}
-              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
                 
                 <div className="px-6 py-4 border-b border-gray-100">
                   <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">Admin</h3>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Users, Building2, ShieldCheck, UserCheck, Edit, Ban, Trash2, 
   MapPin, Phone, Mail, Clock, Plus, Search, ChevronRight, 
@@ -11,6 +12,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
 import { estateApi, estateAdminApi, roleApi } from "../../services/api";
+import { queryClient } from "../../lib/queryClient";
 import type { Resident, Admin, Role } from "../../types/api";
 
 interface EstateDetailViewProps {
@@ -36,13 +38,49 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
   const [activeAdminMenuId, setActiveAdminMenuId] = useState<string | null>(null);
 
-  const [residentsList, setResidentsList] = useState<Resident[]>([]);
-  const [isResidentsLoading, setIsResidentsLoading] = useState(true);
-  const [estateAdminsList, setEstateAdminsList] = useState<Admin[]>([]);
-  const [isEstateAdminsLoading, setIsEstateAdminsLoading] = useState(true);
   const [isOnboardAdminModalOpen, setIsOnboardAdminModalOpen] = useState(false);
   const [newEstateAdmin, setNewEstateAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
-  const [rolesList, setRolesList] = useState<Role[]>([]);
+
+  const parseList = (res: any, ...keys: string[]): any[] => {
+    for (const key of keys) {
+      if (Array.isArray(res?.[key])) return res[key];
+    }
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res)) return res;
+    return [];
+  };
+
+  const qk = {
+    estateResidents: ["estateResidents", estate?.id] as const,
+    estateAdmins: ["estateAdmins", estate?.id] as const,
+    roles: ["roles"] as const,
+  };
+
+  const { data: residentsRaw, isLoading: isResidentsLoading } = useQuery({
+    queryKey: qk.estateResidents,
+    queryFn: () => estateApi.getResidents(estate.id),
+    enabled: !!estate?.id,
+  });
+
+  const { data: estateAdminsRaw, isLoading: isEstateAdminsLoading } = useQuery({
+    queryKey: qk.estateAdmins,
+    queryFn: () => estateAdminApi.list(),
+    enabled: !!estate?.id,
+  });
+
+  const { data: rolesRaw } = useQuery({
+    queryKey: qk.roles,
+    queryFn: () => roleApi.list(),
+  });
+
+  const residentsList: Resident[] = useMemo(() => parseList(residentsRaw, "residents", "result"), [residentsRaw]);
+  const estateAdminsList: Admin[] = useMemo(() => {
+    const raw = parseList(estateAdminsRaw, "admins", "result");
+    if (!estate?.id) return raw;
+    const estateSpecific = raw.filter((a: any) => a.estateId === estate.id);
+    return estateSpecific.length ? estateSpecific : raw;
+  }, [estateAdminsRaw, estate?.id]);
+  const rolesList: Role[] = useMemo(() => parseList(rolesRaw, "roles", "result"), [rolesRaw]);
 
   const securityStaff = [
     { id: 1, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
@@ -56,44 +94,6 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     { id: 2, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, Tomorrow", status: "Expected", officer: `Officer ${adminName}` },
     { id: 3, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, May 14, 2026", status: "Out", officer: `Officer ${adminName}` },
   ];
-
-  const fetchEstateResidents = useCallback(async () => {
-    if (!estate?.id) return;
-    try {
-      setIsResidentsLoading(true);
-      const res: any = await estateApi.getResidents(estate.id);
-      const raw = res?.data ?? res?.residents ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        setResidentsList(raw);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load residents");
-    } finally {
-      setIsResidentsLoading(false);
-    }
-  }, [estate?.id]);
-
-  const fetchEstateAdmins = useCallback(async () => {
-    if (!estate?.id) return;
-    try {
-      setIsEstateAdminsLoading(true);
-      const res: any = await estateAdminApi.list();
-      const raw = res?.data ?? res?.admins ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        const estateSpecific = raw.filter((a: any) => a.estateId === estate.id);
-        setEstateAdminsList(estateSpecific.length ? estateSpecific : raw);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load estate admins");
-    } finally {
-      setIsEstateAdminsLoading(false);
-    }
-  }, [estate?.id]);
-
-  useEffect(() => {
-    fetchEstateResidents();
-    fetchEstateAdmins();
-  }, [fetchEstateResidents, fetchEstateAdmins]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -109,7 +109,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (!window.confirm("Suspend this estate admin?")) return;
     try {
       await estateAdminApi.suspend(adminId);
-      fetchEstateAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
       showToast("Estate admin suspended");
     } catch (err: any) {
       showToast(err.message || "Failed to suspend estate admin");
@@ -119,7 +119,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const handleEstateAdminRestore = async (adminId: string) => {
     try {
       await estateAdminApi.restore(adminId);
-      fetchEstateAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
       showToast("Estate admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore estate admin");
@@ -130,28 +130,12 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (!window.confirm("Delete this estate admin? This cannot be undone.")) return;
     try {
       await estateAdminApi.softDelete(adminId);
-      fetchEstateAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
       showToast("Estate admin deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete estate admin");
     }
   };
-
-  const fetchRoles = useCallback(async () => {
-    try {
-      const res: any = await roleApi.list();
-      const raw = res?.data ?? res?.roles ?? res?.result ?? (Array.isArray(res) ? res : []);
-      if (Array.isArray(raw)) {
-        setRolesList(raw);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to load roles");
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
 
   const handleOnboardEstateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +147,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         email: newEstateAdmin.email,
         roleId: newEstateAdmin.roleId,
       });
-      fetchEstateAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
       showToast("Estate admin onboarded successfully");
       setIsOnboardAdminModalOpen(false);
       setNewEstateAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
@@ -175,7 +159,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const handleEstateAdminUpdateRole = async (adminId: string, roleId: string) => {
     try {
       await estateAdminApi.updateRole(adminId, { roleId });
-      fetchEstateAdmins();
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
       showToast("Estate admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update estate admin role");
@@ -534,7 +518,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                 <Plus className="h-3.5 w-3.5" /> Add Estate Admin
               </button>
             </div>
-            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm">
               {isEstateAdminsLoading ? (
                 <div className="p-12 text-center text-xs text-gray-400">Loading admins...</div>
               ) : estateAdminsList.length === 0 ? (
