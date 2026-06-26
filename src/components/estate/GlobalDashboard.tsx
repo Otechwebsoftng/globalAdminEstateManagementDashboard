@@ -171,9 +171,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         state: "Lagos",
         country: "Nigeria",
       });
-      if (response.success) {
-        fetchEstates();
-      }
+      fetchEstates();
     } catch (err: any) {
       showToast(err.message || "Failed to onboard estate");
     }
@@ -263,14 +261,15 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const fetchDashboard = useCallback(async () => {
     try {
       setIsDashboardLoading(true);
-      const res = await globalAdminApi.getDashboard();
-      if (res.success && res.data) {
+      const res: any = await globalAdminApi.getDashboard();
+      const d = res?.data ?? res?.dashboard ?? res;
+      if (d) {
         setDashboardStats({
-          totalEstates: res.data.totalEstates || 0,
-          totalResidents: res.data.totalResidents || 0,
-          totalStaff: res.data.totalStaff || 0,
-          revenue: "₦0",
-          recentActivity: res.data.recentActivity || [],
+          totalEstates: d.totalEstates || 0,
+          totalResidents: d.totalResidents || 0,
+          totalStaff: d.totalStaff || 0,
+          revenue: d.revenue || "₦0",
+          recentActivity: d.recentActivity || [],
         });
       }
     } catch (err: any) {
@@ -283,18 +282,22 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const fetchEstates = useCallback(async () => {
     try {
       setIsEstatesLoading(true);
-      const res = await estateApi.list();
-      if (res.success && res.data) {
-        const mapped = res.data.map((e: Estate) => ({
+      const res: any = await estateApi.list();
+      // Handle multiple possible response shapes from backend
+      const raw = res?.data ?? res?.estates ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw) && raw.length > 0) {
+        const mapped = raw.map((e: any) => ({
           ...e,
-          name: e.estateName,
-          owner: `${e.firstName} ${e.lastName}`.trim(),
-          phone: `${e.countryCode}${e.phoneNumber}`,
+          name: e.estateName || e.name || "",
+          owner: `${e.firstName || ""} ${e.lastName || ""}`.trim(),
+          phone: `${e.countryCode || ""}${e.phoneNumber || ""}`,
           tier: "ENTERPRISE",
-          status: "Active",
+          status: e.status || "Active",
           date: e.createdAt ? new Date(e.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "",
         }));
         setEstates(mapped);
+      } else {
+        setEstates([]);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load estates");
@@ -306,12 +309,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const fetchAdmins = useCallback(async () => {
     try {
       setIsAdminsLoading(true);
-      const res = await globalAdminApi.list();
-      if (res.success && res.data) {
-        const mapped = res.data.map((a: Admin) => ({
+      const res: any = await globalAdminApi.list();
+      const raw = res?.data ?? res?.admins ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        const mapped = raw.map((a: any) => ({
           ...a,
-          name: `${a.firstName} ${a.lastName}`.trim(),
-          role: a.role?.name || "Admin",
+          name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
+          role: a.role?.name || a.roleName || "Admin",
           lastActivity: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
         }));
         setAdminsList(mapped);
@@ -325,9 +329,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   const fetchRoles = useCallback(async () => {
     try {
-      const res = await roleApi.list();
-      if (res.success && res.data) {
-        setRolesList(res.data);
+      const res: any = await roleApi.list();
+      const raw = res?.data ?? res?.roles ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        setRolesList(raw);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load roles");
@@ -336,9 +341,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   const fetchMenu = useCallback(async () => {
     try {
-      const res = await menuApi.list();
-      if (res.success && res.data) {
-        setMenuItems(res.data);
+      const res: any = await menuApi.list();
+      const raw = res?.data ?? res?.menus ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        setMenuItems(raw);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load menu");
@@ -347,9 +353,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   const fetchPermissions = useCallback(async () => {
     try {
-      const res = await permissionApi.list();
-      if (res.success && res.data) {
-        setPermissionsList(res.data);
+      const res: any = await permissionApi.list();
+      const raw = res?.data ?? res?.permissions ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        setPermissionsList(raw);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load permissions");

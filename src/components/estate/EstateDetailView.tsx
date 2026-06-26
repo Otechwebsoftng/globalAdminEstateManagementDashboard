@@ -61,9 +61,10 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (!estate?.id) return;
     try {
       setIsResidentsLoading(true);
-      const res = await estateApi.getResidents(estate.id);
-      if (res.success && res.data) {
-        setResidentsList(res.data);
+      const res: any = await estateApi.getResidents(estate.id);
+      const raw = res?.data ?? res?.residents ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        setResidentsList(raw);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load residents");
@@ -76,10 +77,11 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (!estate?.id) return;
     try {
       setIsEstateAdminsLoading(true);
-      const res = await estateAdminApi.list();
-      if (res.success && res.data) {
-        const estateSpecific = res.data.filter((a: any) => a.estateId === estate.id);
-        setEstateAdminsList(estateSpecific.length ? estateSpecific : res.data);
+      const res: any = await estateAdminApi.list();
+      const raw = res?.data ?? res?.admins ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        const estateSpecific = raw.filter((a: any) => a.estateId === estate.id);
+        setEstateAdminsList(estateSpecific.length ? estateSpecific : raw);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load estate admins");
