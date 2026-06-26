@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Users, Building2, ShieldCheck, UserCheck, Edit, Ban, Trash2, 
@@ -13,6 +13,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
 import { estateApi, estateAdminApi, roleApi } from "../../services/api";
 import { queryClient } from "../../lib/queryClient";
+import ActionMenu from "../ActionMenu";
 import type { Resident, Admin, Role } from "../../types/api";
 
 interface EstateDetailViewProps {
@@ -36,7 +37,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const { showToast } = useToast();
   const adminName = auth.user?.name || "Administrator";
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
-  const [activeAdminMenuId, setActiveAdminMenuId] = useState<string | null>(null);
+  // Admin menu managed by ActionMenu component
 
   const [isOnboardAdminModalOpen, setIsOnboardAdminModalOpen] = useState(false);
   const [newEstateAdmin, setNewEstateAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
@@ -94,16 +95,6 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     { id: 2, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, Tomorrow", status: "Expected", officer: `Officer ${adminName}` },
     { id: 3, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, May 14, 2026", status: "Out", officer: `Officer ${adminName}` },
   ];
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-dropdown]') || target.closest('[data-dropdown-trigger]')) return;
-      setActiveAdminMenuId(null);
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
 
   const handleEstateAdminSuspend = async (adminId: string) => {
     if (!window.confirm("Suspend this estate admin?")) return;
@@ -554,50 +545,41 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <div className="relative">
+                          <ActionMenu
+                            trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
+                          >
+                            <div className="px-3 py-2 border-b border-gray-100">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
+                              <select
+                                onChange={(e) => { if (e.target.value) handleEstateAdminUpdateRole(adm.id, e.target.value); }}
+                                className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
+                                defaultValue=""
+                              >
+                                <option value="" disabled>Select role...</option>
+                                {rolesList.map((r) => (
+                                  <option key={r.id} value={r.id}>{r.name}</option>
+                                ))}
+                              </select>
+                            </div>
                             <button
-                              onClick={() => setActiveAdminMenuId(activeAdminMenuId === adm.id ? null : adm.id)}
-                              data-dropdown-trigger
-                              className="text-gray-300 hover:text-slate-900 p-1 cursor-pointer"
+                              onClick={() => handleEstateAdminSuspend(adm.id)}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 cursor-pointer"
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              Suspend
                             </button>
-                            {activeAdminMenuId === adm.id && (
-                              <div data-dropdown className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-                                <div className="px-3 py-2 border-b border-gray-100">
-                                  <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
-                                  <select
-                                    onChange={(e) => { if (e.target.value) { handleEstateAdminUpdateRole(adm.id, e.target.value); setActiveAdminMenuId(null); } }}
-                                    className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
-                                    defaultValue=""
-                                  >
-                                    <option value="" disabled>Select role...</option>
-                                    {rolesList.map((r) => (
-                                      <option key={r.id} value={r.id}>{r.name}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <button
-                                  onClick={() => { handleEstateAdminSuspend(adm.id); setActiveAdminMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 cursor-pointer"
-                                >
-                                  Suspend
-                                </button>
-                                <button
-                                  onClick={() => { handleEstateAdminRestore(adm.id); setActiveAdminMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 cursor-pointer"
-                                >
-                                  Restore
-                                </button>
-                                <button
-                                  onClick={() => { handleEstateAdminDelete(adm.id); setActiveAdminMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 cursor-pointer"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                            <button
+                              onClick={() => handleEstateAdminRestore(adm.id)}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handleEstateAdminDelete(adm.id)}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </ActionMenu>
                         </td>
                       </tr>
                     ))}

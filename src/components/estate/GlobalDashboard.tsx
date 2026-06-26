@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2, 
@@ -11,6 +11,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import EstateDetailView from "./EstateDetailView";
 import ResidentDetailView from "./ResidentDetailView";
+import ActionMenu from "../ActionMenu";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -89,8 +90,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [staffShiftFilter, setStaffShiftFilter] = useState("All Shift");
   const [staffTypeFilter, setStaffTypeFilter] = useState("All");
 
-  // Active Admin Actions Popover row ID tracking
-  const [activeRowActionMenuId, setActiveRowActionMenuId] = useState<string | null>(null);
+  // Active Admin Actions Popover — managed by ActionMenu components
 
   // Estates Database State — derived from useQuery below
 
@@ -336,7 +336,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     } catch (err: any) {
       showToast(err.message || "Failed to suspend admin");
     }
-    setActiveRowActionMenuId(null);
   };
 
   const handleAdminRestore = async (adminId: string) => {
@@ -347,7 +346,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     } catch (err: any) {
       showToast(err.message || "Failed to restore admin");
     }
-    setActiveRowActionMenuId(null);
   };
 
   const handleAdminSoftDelete = async (adminId: string) => {
@@ -359,7 +357,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     } catch (err: any) {
       showToast(err.message || "Failed to delete admin");
     }
-    setActiveRowActionMenuId(null);
   };
 
   const handleCreateRole = async (e: React.FormEvent) => {
@@ -411,16 +408,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       showToast(err.message || "Failed to update admin role");
     }
   };
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-dropdown]') || target.closest('[data-dropdown-trigger]')) return;
-      setActiveRowActionMenuId(null);
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
 
   const renderDashboardView = () => (
     <div className="space-y-6">
@@ -952,50 +939,41 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </td>
                   <td className="py-4 px-6 font-bold text-gray-400">{admin.lastActivity}</td>
                   <td className="py-4 px-6 text-right">
-                    <div className="relative">
+                    <ActionMenu
+                      trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
+                    >
+                      <div className="px-3 py-2 border-b border-gray-100">
+                        <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
+                        <select
+                          onChange={(e) => { if (e.target.value) handleAdminUpdateRole(admin.id, e.target.value); }}
+                          className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Select role...</option>
+                          {rolesList.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      </div>
                       <button
-                        data-dropdown-trigger
-                        onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === `list-admin-${admin.id}` ? null : `list-admin-${admin.id}`)}
-                        className="text-gray-300 hover:text-slate-900 p-1 cursor-pointer"
+                        onClick={() => handleAdminSuspend(admin.id)}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
                       >
-                        <MoreVertical className="h-4 w-4" />
+                        <Ban className="h-3.5 w-3.5" /> Suspend
                       </button>
-                      {activeRowActionMenuId === `list-admin-${admin.id}` && (
-                        <div data-dropdown className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-                          <div className="px-3 py-2 border-b border-gray-100">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
-                            <select
-                              onChange={(e) => { if (e.target.value) handleAdminUpdateRole(admin.id, e.target.value); }}
-                              className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
-                              defaultValue=""
-                            >
-                              <option value="" disabled>Select role...</option>
-                              {rolesList.map((r) => (
-                                <option key={r.id} value={r.id}>{r.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <button
-                            onClick={() => handleAdminSuspend(admin.id)}
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
-                          >
-                            <Ban className="h-3.5 w-3.5" /> Suspend
-                          </button>
-                          <button
-                            onClick={() => handleAdminRestore(admin.id)}
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" /> Restore
-                          </button>
-                          <button
-                            onClick={() => handleAdminSoftDelete(admin.id)}
-                            className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" /> Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      <button
+                        onClick={() => handleAdminRestore(admin.id)}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" /> Restore
+                      </button>
+                      <button
+                        onClick={() => handleAdminSoftDelete(admin.id)}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    </ActionMenu>
                   </td>
                 </tr>
               ))}
@@ -1819,34 +1797,26 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                               </span>
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-400">{est.date}</td>
-                            <td className="py-4 px-6 text-right relative">
-                              <button 
-                                onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === est.id ? null : est.id)}
-                                data-dropdown-trigger
-                                className="text-gray-300 hover:text-slate-900 p-1"
+                            <td className="py-4 px-6 text-right">
+                              <ActionMenu
+                                trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
+                                width="w-40"
                               >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
-
-                              {activeRowActionMenuId === est.id && (
-                                <div data-dropdown className="absolute right-12 top-10 w-40 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 text-left overflow-hidden py-1.5 ring-4 ring-slate-50">
-                                  <button
-                                    onClick={() => { setSelectedEstateId(est.id); setActiveRowActionMenuId(null); }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Eye className="h-3.5 w-3.5 text-blue-600" />
-                                    <span>View Estate</span>
-                                  </button>
-                                  <button
-                                    onClick={() => { setEditingEstate(est); setIsEditModalOpen(true); setActiveRowActionMenuId(null); }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Edit className="h-3.5 w-3.5 text-amber-600" />
-                                    <span>Edit Estate</span>
-                                  </button>
-
-                                </div>
-                              )}
+                                <button
+                                  onClick={() => setSelectedEstateId(est.id)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                                  <span>View Estate</span>
+                                </button>
+                                <button
+                                  onClick={() => { setEditingEstate(est); setIsEditModalOpen(true); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Edit className="h-3.5 w-3.5 text-amber-600" />
+                                  <span>Edit Estate</span>
+                                </button>
+                              </ActionMenu>
                             </td>
                           </tr>
                         ))}
@@ -1964,57 +1934,48 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                               </span>
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-400">{res.joinedDate}</td>
-                            <td className="py-4 px-6 text-right relative">
-                              <button 
-                                onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === res.id ? null : res.id)}
-                                data-dropdown-trigger
-                                className="text-gray-300 hover:text-slate-900 p-1"
+                            <td className="py-4 px-6 text-right">
+                              <ActionMenu
+                                trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
+                                width="w-44"
                               >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
-
-                              {activeRowActionMenuId === res.id && (
-                                <div data-dropdown className="absolute right-12 top-10 w-44 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 text-left overflow-hidden py-1.5 ring-4 ring-slate-50">
-                                  <button
-                                    onClick={() => { setSelectedResidentId(res.id); setActiveRowActionMenuId(null); }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Eye className="h-3.5 w-3.5 text-blue-600" />
-                                    <span>View Profile</span>
-                                  </button>
-                                  <button
-                                    onClick={() => { setEditingResident(res); setIsEditResidentModalOpen(true); setActiveRowActionMenuId(null); }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Edit className="h-3.5 w-3.5 text-amber-600" />
-                                    <span>Edit Details</span>
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      if(window.confirm(`Suspend access for ${res.name}?`)) {
-                                        setResidents(residents.map(r => r.id === res.id ? {...r, status: r.status === 'Active' ? 'Suspended' : 'Active'} : r));
-                                        setActiveRowActionMenuId(null);
-                                      }
-                                    }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-amber-600 hover:bg-amber-50"
-                                  >
-                                    <ShieldAlert className="h-3.5 w-3.5" />
-                                    <span>{res.status === 'Active' ? 'Suspend Access' : 'Restore Access'}</span>
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      if(window.confirm(`Deactivate and remove ${res.name} from records?`)) {
-                                        setResidents(residents.filter(r => r.id !== res.id));
-                                        setActiveRowActionMenuId(null);
-                                      }
-                                    }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50 border-t border-gray-50 mt-1"
-                                  >
-                                    <UserX className="h-3.5 w-3.5" />
-                                    <span>Deactivate</span>
-                                  </button>
-                                </div>
-                              )}
+                                <button
+                                  onClick={() => setSelectedResidentId(res.id)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                                  <span>View Profile</span>
+                                </button>
+                                <button
+                                  onClick={() => { setEditingResident(res); setIsEditResidentModalOpen(true); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Edit className="h-3.5 w-3.5 text-amber-600" />
+                                  <span>Edit Details</span>
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if(window.confirm(`Suspend access for ${res.name}?`)) {
+                                      setResidents(residents.map(r => r.id === res.id ? {...r, status: r.status === 'Active' ? 'Suspended' : 'Active'} : r));
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-amber-600 hover:bg-amber-50"
+                                >
+                                  <ShieldAlert className="h-3.5 w-3.5" />
+                                  <span>{res.status === 'Active' ? 'Suspend Access' : 'Restore Access'}</span>
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if(window.confirm(`Deactivate and remove ${res.name} from records?`)) {
+                                      setResidents(residents.filter(r => r.id !== res.id));
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50 border-t border-gray-50 mt-1"
+                                >
+                                  <UserX className="h-3.5 w-3.5" />
+                                  <span>Deactivate</span>
+                                </button>
+                              </ActionMenu>
                             </td>
                           </tr>
                         ))}
@@ -2252,57 +2213,42 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                             <td className="py-3.5 px-4 text-center relative">
                               
                               {/* Trigger actions popover */}
-                              <button
-                                onClick={() => {
-                                  setActiveRowActionMenuId(activeRowActionMenuId === st.id ? null : st.id);
-                                }}
-                                data-dropdown-trigger
-                                className="p-1 px-2.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-slate-900 transition-colors inline-flex cursor-pointer"
+                              <ActionMenu
+                                trigger={<span className="p-1 px-2.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-slate-900 transition-colors inline-flex cursor-pointer"><span className="text-sm font-black tracking-widest">•••</span></span>}
+                                width="w-36"
                               >
-                                <span className="text-sm font-black tracking-widest">•••</span>
-                              </button>
-
-                              {/* Dropdown Action Popover strictly matched to visual style */}
-                              {activeRowActionMenuId === st.id && (
-                                <div data-dropdown className="absolute right-6 top-10 w-36 bg-white border border-gray-200 rounded-xl shadow-xl z-30 text-left overflow-hidden py-1">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedStaff(st);
-                                      setActiveRowActionMenuId(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                                  >
-                                    <Eye className="h-3.5 w-3.5 text-slate-400" />
-                                    <span>View Profile</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const confirmAction = window.confirm(`Suspend access credentials for ${st.name}?`);
-                                      if (confirmAction) {
-                                        setStaffList(staffList.map(s => s.id === st.id ? { ...s, status: "Suspended" } : s));
-                                      }
-                                      setActiveRowActionMenuId(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
-                                  >
-                                    <BanIcon className="h-3.5 w-3.5" />
-                                    <span>Suspend Access</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const confirmAction = window.confirm(`Deactivate records for ${st.name} permanently?`);
-                                      if (confirmAction) {
-                                        setStaffList(staffList.filter(s => s.id !== st.id));
-                                      }
-                                      setActiveRowActionMenuId(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 border-t border-gray-100 transition-colors"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    <span>Deactivate</span>
-                                  </button>
-                                </div>
-                              )}
+                                <button
+                                  onClick={() => setSelectedStaff(st)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-slate-400" />
+                                  <span>View Profile</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const confirmAction = window.confirm(`Suspend access credentials for ${st.name}?`);
+                                    if (confirmAction) {
+                                      setStaffList(staffList.map(s => s.id === st.id ? { ...s, status: "Suspended" } : s));
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                                >
+                                  <BanIcon className="h-3.5 w-3.5" />
+                                  <span>Suspend Access</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const confirmAction = window.confirm(`Deactivate records for ${st.name} permanently?`);
+                                    if (confirmAction) {
+                                      setStaffList(staffList.filter(s => s.id !== st.id));
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 border-t border-gray-100 transition-colors"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span>Deactivate</span>
+                                </button>
+                              </ActionMenu>
 
                             </td>
                           </tr>
@@ -2404,50 +2350,41 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                           </td>
                           <td className="py-4 px-4 text-gray-400 font-medium font-mono">{adm.lastActivity}</td>
                           <td className="py-4 px-4 text-right">
-                            <div className="relative">
+                            <ActionMenu
+                              trigger={<MoreVertical className="h-4 w-4 text-gray-400 hover:text-slate-900" />}
+                            >
+                              <div className="px-3 py-2 border-b border-gray-100">
+                                <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
+                                <select
+                                  onChange={(e) => { if (e.target.value) handleAdminUpdateRole(adm.id, e.target.value); }}
+                                  className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
+                                  defaultValue=""
+                                >
+                                  <option value="" disabled>Select role...</option>
+                                  {rolesList.map((r) => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                  ))}
+                                </select>
+                              </div>
                               <button
-                                onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === `admin-${adm.id}` ? null : `admin-${adm.id}`)}
-                                data-dropdown-trigger
-                                className="text-gray-400 hover:text-slate-900 p-1 cursor-pointer"
+                                onClick={() => handleAdminSuspend(adm.id)}
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
                               >
-                                <MoreVertical className="h-4.5 w-4.5" />
+                                <Ban className="h-3.5 w-3.5" /> Suspend
                               </button>
-                              {activeRowActionMenuId === `admin-${adm.id}` && (
-                                <div data-dropdown className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-                                  <div className="px-3 py-2 border-b border-gray-100">
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
-                                    <select
-                                      onChange={(e) => { if (e.target.value) handleAdminUpdateRole(adm.id, e.target.value); }}
-                                      className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
-                                      defaultValue=""
-                                    >
-                                      <option value="" disabled>Select role...</option>
-                                      {rolesList.map((r) => (
-                                        <option key={r.id} value={r.id}>{r.name}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <button
-                                    onClick={() => handleAdminSuspend(adm.id)}
-                                    className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <Ban className="h-3.5 w-3.5" /> Suspend
-                                  </button>
-                                  <button
-                                    onClick={() => handleAdminRestore(adm.id)}
-                                    className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <RefreshCw className="h-3.5 w-3.5" /> Restore
-                                  </button>
-                                  <button
-                                    onClick={() => handleAdminSoftDelete(adm.id)}
-                                    className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                              <button
+                                onClick={() => handleAdminRestore(adm.id)}
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" /> Restore
+                              </button>
+                              <button
+                                onClick={() => handleAdminSoftDelete(adm.id)}
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                              </button>
+                            </ActionMenu>
                           </td>
                         </tr>
                       ))}
