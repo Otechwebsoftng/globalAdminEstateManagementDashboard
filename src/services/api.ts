@@ -29,6 +29,7 @@ import type {
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 let authToken: string | null = localStorage.getItem("global_estates_token");
+let onSessionExpired: (() => void) | null = null;
 
 export function setAuthToken(token: string | null) {
   authToken = token;
@@ -37,6 +38,10 @@ export function setAuthToken(token: string | null) {
   } else {
     localStorage.removeItem("global_estates_token");
   }
+}
+
+export function setOnSessionExpired(callback: (() => void) | null) {
+  onSessionExpired = callback;
 }
 
 export function getAuthToken(): string | null {
@@ -71,6 +76,9 @@ async function request<T>(
   const res = await fetch(url, { ...options, headers });
 
   if (!res.ok) {
+    if ((res.status === 401 || res.status === 403) && !mfaToken && onSessionExpired) {
+      onSessionExpired();
+    }
     let errorMessage = `Request failed (${res.status})`;
     try {
       const errorBody = await res.json();

@@ -531,7 +531,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             </select>
           </div>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={320}>
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
@@ -1545,7 +1545,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                     {/* Recharts chart area */}
                     <div className="h-56 mt-4 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height={224}>
                         <LineChart data={revenueData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                           <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />

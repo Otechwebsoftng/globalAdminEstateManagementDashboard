@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import SessionExpiredGate from "./components/SessionExpiredGate";
 import EstateLogin from "./components/estate/EstateLogin";
 import GlobalDashboard from "./components/estate/GlobalDashboard";
 
@@ -32,10 +33,12 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route path="/admin/*" element={<GlobalDashboard />} />
-      <Route path="*" element={<Navigate to="/admin/dashboard" />} />
-    </Routes>
+    <SessionExpiredGate>
+      <Routes>
+        <Route path="/admin/*" element={<GlobalDashboard />} />
+        <Route path="*" element={<Navigate to="/admin/dashboard" />} />
+      </Routes>
+    </SessionExpiredGate>
   );
 }
 
