@@ -63,9 +63,26 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     enabled: !!estate?.id,
   });
 
+  const fetchAllEstateAdmins = async () => {
+    if (!estate?.id) return [];
+    const statuses = ["active", "inactive", "suspended", "flagged"];
+    const results = await Promise.allSettled(
+      statuses.map((s) => estateAdminApi.list({ status: s }))
+    );
+    const seen = new Map<string, any>();
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        for (const item of parseList(r.value, "admins", "result")) {
+          if (item?.id && !seen.has(item.id)) seen.set(item.id, item);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  };
+
   const { data: estateAdminsRaw, isLoading: isEstateAdminsLoading } = useQuery({
     queryKey: qk.estateAdmins,
-    queryFn: () => estateAdminApi.list(),
+    queryFn: fetchAllEstateAdmins,
     enabled: !!estate?.id,
   });
 
@@ -76,7 +93,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const residentsList: Resident[] = useMemo(() => parseList(residentsRaw, "residents", "result"), [residentsRaw]);
   const estateAdminsList: Admin[] = useMemo(() => {
-    const raw = parseList(estateAdminsRaw, "admins", "result");
+    const raw = Array.isArray(estateAdminsRaw) ? estateAdminsRaw : parseList(estateAdminsRaw, "admins", "result");
     if (!estate?.id) return raw;
     const estateSpecific = raw.filter((a: any) => a.estateId === estate.id);
     return estateSpecific.length ? estateSpecific : raw;

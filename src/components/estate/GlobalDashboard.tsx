@@ -190,6 +190,22 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     return [];
   };
 
+  const fetchAllAdmins = async () => {
+    const statuses = ["active", "inactive", "suspended", "flagged"];
+    const results = await Promise.allSettled(
+      statuses.map((s) => globalAdminApi.list({ status: s }))
+    );
+    const seen = new Map<string, any>();
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        for (const item of parseList(r.value, "admins", "users", "result")) {
+          if (item?.id && !seen.has(item.id)) seen.set(item.id, item);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  };
+
   const { data: dashboardRaw, isLoading: isDashboardLoading } = useQuery({
     queryKey: qk.dashboard,
     queryFn: () => globalAdminApi.getDashboard(),
@@ -202,7 +218,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   const { data: adminsRaw, isLoading: isAdminsLoading, refetch: refetchAdmins } = useQuery({
     queryKey: qk.admins,
-    queryFn: () => globalAdminApi.list(),
+    queryFn: fetchAllAdmins,
   });
 
   const { data: rolesRaw } = useQuery({
@@ -247,11 +263,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   }, [estatesRaw]);
 
   const adminsList: AdminRow[] = useMemo(() => {
-    const raw = parseList(adminsRaw, "admins", "users", "result");
+    const raw = Array.isArray(adminsRaw) ? adminsRaw : parseList(adminsRaw, "admins", "users", "result");
     return raw.map((a: any) => ({
       ...a,
       name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
       role: a.role?.name || a.roleName || "Admin",
+      status: a.status || a.userStatus || "active",
       lastActivity: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
     }));
   }, [adminsRaw]);
@@ -1696,7 +1713,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                               onClick={() => {
                                 alert(`Opening command config parameters for ${est.name}`);
                               }}
-                              data-dropdown-trigger
                               className="text-gray-400 hover:text-slate-900 transition-colors p-1"
                             >
                               <MoreVertical className="h-4 w-4" />

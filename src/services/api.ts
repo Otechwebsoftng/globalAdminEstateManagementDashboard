@@ -214,8 +214,9 @@ export const globalAdminApi = {
 
 export const estateAdminApi = {
   list(params?: { status?: string }) {
-    const qs = params?.status ? `?status=${params.status}` : "";
-    return request<ApiPaginatedResponse<Admin>>(`/estate-admin${qs}`);
+    const parts: string[] = ["pageSize=100"];
+    if (params?.status) parts.push(`userStatus=${params.status}`);
+    return request<any>(`/estate-admin?${parts.join("&")}`);
   },
 
   getById(adminId: string) {
