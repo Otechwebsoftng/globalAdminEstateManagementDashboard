@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import SessionExpiredGate from "./components/SessionExpiredGate";
+import ErrorBoundary from "./components/ErrorBoundary";
 import EstateLogin from "./components/estate/EstateLogin";
 import GlobalDashboard from "./components/estate/GlobalDashboard";
 
@@ -34,10 +35,12 @@ function AppRoutes() {
 
   return (
     <SessionExpiredGate>
-      <Routes>
-        <Route path="/admin/*" element={<GlobalDashboard />} />
-        <Route path="*" element={<Navigate to="/admin/dashboard" />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/admin/*" element={<GlobalDashboard />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" />} />
+        </Routes>
+      </ErrorBoundary>
     </SessionExpiredGate>
   );
 }
