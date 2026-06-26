@@ -124,7 +124,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [newRole, setNewRole] = useState({ name: "", description: "", permissionIds: [] as string[] });
-  const [newAdmin, setNewAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
+  const [newAdmin, setNewAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "", phoneNumber: "" });
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [newResident, setNewResident] = useState({ name: "", email: "", phone: "", houseNo: "" });
   const [editingResident, setEditingResident] = useState<any>(null);
@@ -205,7 +205,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   // Add new admin function
   const handleAddAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdmin.firstName || !newAdmin.email) return;
+    if (!newAdmin.firstName || !newAdmin.email || !newAdmin.roleId) return;
 
     try {
       await globalAdminApi.onboard({
@@ -213,16 +213,17 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         lastName: newAdmin.lastName,
         email: newAdmin.email,
         countryCode: "+234",
-        phoneNumber: "",
+        phoneNumber: newAdmin.phoneNumber || "0000000000",
         roleId: newAdmin.roleId,
       });
       fetchAdmins();
+      showToast("Admin onboarded successfully");
     } catch (err: any) {
       showToast(err.message || "Failed to onboard admin");
     }
 
     setIsAdminModalOpen(false);
-    setNewAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
+    setNewAdmin({ firstName: "", lastName: "", email: "", roleId: "", phoneNumber: "" });
   };
 
   const handleAdminSuspend = async (adminId: string) => {
@@ -230,6 +231,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await globalAdminApi.suspend(adminId);
       fetchAdmins();
+      showToast("Admin suspended");
     } catch (err: any) {
       showToast(err.message || "Failed to suspend admin");
     }
@@ -240,6 +242,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await globalAdminApi.restore(adminId);
       fetchAdmins();
+      showToast("Admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore admin");
     }
@@ -251,6 +254,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await globalAdminApi.softDelete(adminId);
       fetchAdmins();
+      showToast("Admin deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete admin");
     }
@@ -369,6 +373,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await roleApi.create({ name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
       fetchRoles();
+      showToast("Role created successfully");
       setIsRoleModalOpen(false);
       setNewRole({ name: "", description: "", permissionIds: [] });
     } catch (err: any) {
@@ -382,6 +387,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await roleApi.update(editingRole.id, { name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
       fetchRoles();
+      showToast("Role updated successfully");
       setIsRoleModalOpen(false);
       setEditingRole(null);
       setNewRole({ name: "", description: "", permissionIds: [] });
@@ -395,6 +401,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await roleApi.delete(roleId);
       fetchRoles();
+      showToast("Role deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete role");
     }
@@ -404,6 +411,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     try {
       await globalAdminApi.updateRole(adminId, { roleId });
       fetchAdmins();
+      showToast("Admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update admin role");
     }
@@ -666,9 +674,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                         className="text-gray-500 hover:text-gray-700 p-1"
                       >
                         <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="text-rose-500 hover:text-rose-700 p-1">
-                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
@@ -957,9 +962,49 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </td>
                   <td className="py-4 px-6 font-bold text-gray-400">{admin.lastActivity}</td>
                   <td className="py-4 px-6 text-right">
-                    <button className="text-gray-300 hover:text-slate-900 p-1">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setActiveRowActionMenuId(activeRowActionMenuId === `list-admin-${admin.id}` ? null : `list-admin-${admin.id}`)}
+                        className="text-gray-300 hover:text-slate-900 p-1 cursor-pointer"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                      {activeRowActionMenuId === `list-admin-${admin.id}` && (
+                        <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
+                          <div className="px-3 py-2 border-b border-gray-100">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
+                            <select
+                              onChange={(e) => { if (e.target.value) handleAdminUpdateRole(admin.id, e.target.value); }}
+                              className="w-full text-xs font-bold border border-gray-200 rounded-lg px-2 py-1 mt-1 outline-none"
+                              defaultValue=""
+                            >
+                              <option value="" disabled>Select role...</option>
+                              {rolesList.map((r) => (
+                                <option key={r.id} value={r.id}>{r.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            onClick={() => handleAdminSuspend(admin.id)}
+                            className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                          >
+                            <Ban className="h-3.5 w-3.5" /> Suspend
+                          </button>
+                          <button
+                            onClick={() => handleAdminRestore(admin.id)}
+                            className="w-full text-left px-4 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 cursor-pointer"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" /> Restore
+                          </button>
+                          <button
+                            onClick={() => handleAdminSoftDelete(admin.id)}
+                            className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -3157,8 +3202,24 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                <div className="flex gap-2">
+                  <div className="w-16 h-[34px] bg-slate-50 border border-gray-200 rounded-lg flex items-center justify-center text-[10px] font-black text-gray-400">+234</div>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="e.g. 803 533 5432"
+                    value={newAdmin.phoneNumber}
+                    onChange={(e) => setNewAdmin({ ...newAdmin, phoneNumber: e.target.value })}
+                    className="flex-1 text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Administrative Role Category</label>
                 <select
+                  required
                   value={newAdmin.roleId}
                   onChange={(e) => setNewAdmin({ ...newAdmin, roleId: e.target.value })}
                   className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
@@ -3167,13 +3228,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   {rolesList.map((role) => (
                     <option key={role.id} value={role.id}>{role.name}</option>
                   ))}
-                  {rolesList.length === 0 && (
-                    <>
-                      <option value="super-admin">Super Admin</option>
-                      <option value="support-lead">Support Lead</option>
-                      <option value="system-admin">System Admin</option>
-                    </>
-                  )}
                 </select>
               </div>
 
@@ -3249,7 +3303,22 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Permissions</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Permissions</label>
+                  {permissionsList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = permissionsList.map(p => p.id);
+                        const allSelected = allIds.every(id => newRole.permissionIds.includes(id));
+                        setNewRole({ ...newRole, permissionIds: allSelected ? [] : allIds });
+                      }}
+                      className="text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                    >
+                      {permissionsList.every(p => newRole.permissionIds.includes(p.id)) ? "Deselect All" : "Select All"}
+                    </button>
+                  )}
+                </div>
                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
                   {permissionsList.length === 0 ? (
                     <p className="text-[10px] text-gray-400 py-2 text-center">No permissions available</p>

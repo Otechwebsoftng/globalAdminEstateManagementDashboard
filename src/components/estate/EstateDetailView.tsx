@@ -106,6 +106,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     try {
       await estateAdminApi.suspend(adminId);
       fetchEstateAdmins();
+      showToast("Estate admin suspended");
     } catch (err: any) {
       showToast(err.message || "Failed to suspend estate admin");
     }
@@ -115,6 +116,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     try {
       await estateAdminApi.restore(adminId);
       fetchEstateAdmins();
+      showToast("Estate admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore estate admin");
     }
@@ -125,6 +127,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     try {
       await estateAdminApi.softDelete(adminId);
       fetchEstateAdmins();
+      showToast("Estate admin deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete estate admin");
     }
@@ -132,9 +135,10 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const fetchRoles = useCallback(async () => {
     try {
-      const res = await roleApi.list();
-      if (res.success && res.data) {
-        setRolesList(res.data);
+      const res: any = await roleApi.list();
+      const raw = res?.data ?? res?.roles ?? res?.result ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        setRolesList(raw);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to load roles");
@@ -147,7 +151,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const handleOnboardEstateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEstateAdmin.firstName || !newEstateAdmin.email) return;
+    if (!newEstateAdmin.firstName || !newEstateAdmin.email || !newEstateAdmin.roleId) return;
     try {
       await estateAdminApi.onboard({
         firstName: newEstateAdmin.firstName,
@@ -156,6 +160,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         roleId: newEstateAdmin.roleId,
       });
       fetchEstateAdmins();
+      showToast("Estate admin onboarded successfully");
       setIsOnboardAdminModalOpen(false);
       setNewEstateAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
     } catch (err: any) {
@@ -167,6 +172,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     try {
       await estateAdminApi.updateRole(adminId, { roleId });
       fetchEstateAdmins();
+      showToast("Estate admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update estate admin role");
     }
@@ -798,6 +804,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Role</label>
                 <select
+                  required
                   value={newEstateAdmin.roleId}
                   onChange={(e) => setNewEstateAdmin({ ...newEstateAdmin, roleId: e.target.value })}
                   className="w-full text-xs p-2.5 bg-white border border-gray-200 rounded-lg outline-none"
