@@ -173,10 +173,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   };
 
   const parseList = (res: any, ...keys: string[]): any[] => {
+    if (!res) return [];
     for (const key of keys) {
       if (Array.isArray(res?.[key])) return res[key];
     }
     if (Array.isArray(res?.data)) return res.data;
+    if (res?.data && typeof res.data === "object" && !Array.isArray(res.data)) {
+      for (const key of keys) {
+        if (Array.isArray(res.data?.[key])) return res.data[key];
+      }
+    }
     if (Array.isArray(res)) return res;
     return [];
   };
@@ -191,7 +197,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     queryFn: () => estateApi.list(),
   });
 
-  const { data: adminsRaw, isLoading: isAdminsLoading } = useQuery({
+  const { data: adminsRaw, isLoading: isAdminsLoading, refetch: refetchAdmins } = useQuery({
     queryKey: qk.admins,
     queryFn: () => globalAdminApi.list(),
   });
@@ -315,6 +321,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         roleId: newAdmin.roleId,
       });
       queryClient.invalidateQueries({ queryKey: qk.admins });
+      await refetchAdmins();
       showToast("Admin onboarded successfully");
     } catch (err: any) {
       if (err.status === 409) {
@@ -2343,9 +2350,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                             </span>
                           </td>
                           <td className="py-4 px-4">
-                            <span className="inline-flex items-center gap-1 text-[9.5px] font-extrabold text-emerald-700">
-                              <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full inline-block" />
-                              Active
+                            <span className={`inline-flex items-center gap-1 text-[9.5px] font-extrabold ${
+                              adm.status?.toLowerCase() === "active" ? "text-emerald-700" : "text-amber-700"
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full inline-block ${
+                                adm.status?.toLowerCase() === "active" ? "bg-emerald-500" : "bg-amber-500"
+                              }`} />
+                              {adm.status || "Active"}
                             </span>
                           </td>
                           <td className="py-4 px-4 text-gray-400 font-medium font-mono">{adm.lastActivity}</td>
