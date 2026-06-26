@@ -191,6 +191,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   };
 
   const fetchAllAdmins = async () => {
+    // Primary: single call WITHOUT status filter returns ALL admins
+    const res = await globalAdminApi.list();
+    const items = parseList(res, "admins", "users", "result");
+    if (items.length > 0) return items;
+
+    // Fallback: if unfiltered call returned empty, try each status individually
     const statuses = ["active", "inactive", "suspended", "flagged"];
     const results = await Promise.allSettled(
       statuses.map((s) => globalAdminApi.list({ status: s }))

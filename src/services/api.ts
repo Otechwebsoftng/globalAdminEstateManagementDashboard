@@ -161,7 +161,7 @@ export const globalAdminApi = {
   },
 
   list(params?: { status?: string }) {
-    const parts: string[] = ["pageSize=100"];
+    const parts: string[] = ["pageSize=500"];
     if (params?.status) parts.push(`userStatus=${params.status}`);
     return request<any>(`/global-admin?${parts.join("&")}`);
   },
@@ -214,7 +214,7 @@ export const globalAdminApi = {
 
 export const estateAdminApi = {
   list(params?: { status?: string }) {
-    const parts: string[] = ["pageSize=100"];
+    const parts: string[] = ["pageSize=500"];
     if (params?.status) parts.push(`userStatus=${params.status}`);
     return request<any>(`/estate-admin?${parts.join("&")}`);
   },
