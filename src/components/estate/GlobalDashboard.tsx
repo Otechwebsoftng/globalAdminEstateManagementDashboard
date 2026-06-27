@@ -65,6 +65,20 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const { showToast } = useToast();
 
   const adminName = auth.user?.name || "Administrator";
+  const emptyEstateForm = {
+    name: "",
+    firstName: "",
+    lastName: "",
+    cac: "",
+    countryCode: "+234",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "Nigeria",
+    tier: "ENTERPRISE"
+  };
 
   const onLogout = () => {
     auth.logout();
@@ -96,17 +110,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // State to manage Onboard Estate Modal input - matches frame 1618686559/1618686560
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
-  const [newEstate, setNewEstate] = useState({
-    name: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "Lagos",
-    state: "Lagos",
-    tier: "ENTERPRISE"
-  });
+  const [newEstate, setNewEstate] = useState(emptyEstateForm);
   const [sendLoginDetails, setSendLoginDetails] = useState(true);
 
   // Residents State
@@ -288,30 +292,50 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   // ── Mutations with cache invalidation ────────────────────
   const handleOnboardEstateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEstate.name || !newEstate.email) return;
+    const requiredFields = [
+      newEstate.name,
+      newEstate.firstName,
+      newEstate.lastName,
+      newEstate.cac,
+      newEstate.countryCode,
+      newEstate.phone,
+      newEstate.email,
+      newEstate.address,
+      newEstate.city,
+      newEstate.state,
+      newEstate.country,
+    ];
+    if (requiredFields.some((value) => !value.trim())) {
+      showToast("Please fill every required estate and contact admin field.");
+      return;
+    }
     try {
       await estateApi.onboard({
-        estateName: newEstate.name,
-        firstName: newEstate.firstName,
-        lastName: newEstate.lastName,
-        cac: "N/A",
-        countryCode: "+234",
-        phoneNumber: newEstate.phone || "0000000000",
-        email: newEstate.email,
-        address: newEstate.address || "N/A",
-        city: newEstate.city,
-        state: newEstate.state,
-        country: "Nigeria",
+        estateName: newEstate.name.trim(),
+        firstName: newEstate.firstName.trim(),
+        lastName: newEstate.lastName.trim(),
+        cac: newEstate.cac.trim(),
+        countryCode: newEstate.countryCode.trim(),
+        phoneNumber: newEstate.phone.trim(),
+        email: newEstate.email.trim(),
+        address: newEstate.address.trim(),
+        city: newEstate.city.trim(),
+        state: newEstate.state.trim(),
+        country: newEstate.country.trim(),
       });
       queryClient.invalidateQueries({ queryKey: qk.estates });
       await refetchEstates();
       showToast("Estate onboarded successfully");
+      setIsOnboardModalOpen(false);
+      setNewEstate(emptyEstateForm);
+      setSendLoginDetails(true);
     } catch (err: any) {
-      showToast(err.message || "Failed to onboard estate");
+      if (err.status === 409) {
+        showToast("An estate contact admin with this email already exists.");
+      } else {
+        showToast(err.message || "Failed to onboard estate");
+      }
     }
-    setIsOnboardModalOpen(false);
-    setNewEstate({ name: "", firstName: "", lastName: "", email: "", phone: "", address: "", city: "Lagos", state: "Lagos", tier: "ENTERPRISE" });
-    setSendLoginDetails(true);
   };
 
   const handleEditEstateSubmit = async (e: React.FormEvent) => {
@@ -2597,8 +2621,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
       {/* 1. ONBOARD NEW ESTATE POPUP MODAL - HIGH FIDELITY DESIGN */}
       {isOnboardModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4">
-          <div className="bg-white rounded-[32px] w-full max-w-2xl p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4 py-6 overflow-y-auto">
+          <div className="bg-white rounded-[32px] w-full max-w-3xl max-h-[calc(100vh-3rem)] overflow-y-auto p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
             <button
               className="absolute top-6 right-6 text-gray-400 hover:text-slate-900 transition-colors"
               onClick={() => setIsOnboardModalOpen(false)}
@@ -2661,6 +2685,20 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                 <div className="relative">
                   <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
+                    CAC Number
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="text" required placeholder="RC1234567" value={newEstate.cac}
+                      onChange={(e) => setNewEstate({...newEstate, cac: e.target.value})}
+                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
                     Email Address
                   </label>
                   <div className="relative">
@@ -2678,7 +2716,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     Phone Number
                   </label>
                   <div className="flex gap-2">
-                    <div className="w-16 h-12 bg-slate-50 border border-gray-200 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-400">+234</div>
+                    <input
+                      type="text" required aria-label="Country code" value={newEstate.countryCode}
+                      onChange={(e) => setNewEstate({...newEstate, countryCode: e.target.value})}
+                      className="w-20 text-xs px-3 py-3.5 bg-slate-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-black text-gray-500"
+                    />
                     <div className="relative flex-1">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                       <input
@@ -2695,12 +2737,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     State
                   </label>
                   <div className="relative">
-                    <select value={newEstate.state} onChange={(e) => setNewEstate({...newEstate, state: e.target.value})} className="w-full text-xs px-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold appearance-none">
-                      <option>Lagos</option>
-                      <option>Abuja</option>
-                      <option>Surulere</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="text" required placeholder="Lagos" value={newEstate.state}
+                      onChange={(e) => setNewEstate({...newEstate, state: e.target.value})}
+                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
+                    />
                   </div>
                 </div>
 
@@ -2711,7 +2753,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <div className="relative">
                     <MapPin className="absolute left-4 top-4 h-3.5 w-3.5 text-gray-400" />
                     <textarea
-                      rows={2} placeholder="e.g Suite 402, Marble Towers, Kingsway Road" value={newEstate.address}
+                      rows={2} required placeholder="e.g Suite 402, Marble Towers, Kingsway Road" value={newEstate.address}
                       onChange={(e) => setNewEstate({...newEstate, address: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200 resize-none"
                     />
@@ -2725,8 +2767,22 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                     <input
-                      type="text" placeholder="Surulere" value={newEstate.city}
+                      type="text" required placeholder="Surulere" value={newEstate.city}
                       onChange={(e) => setNewEstate({...newEstate, city: e.target.value})}
+                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
+                    Country
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="text" required placeholder="Nigeria" value={newEstate.country}
+                      onChange={(e) => setNewEstate({...newEstate, country: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
                     />
                   </div>
