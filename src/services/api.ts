@@ -26,7 +26,15 @@ import type {
   ApiSingleResponse,
 } from "../types/api";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+const API_PREFIX = "/api/v1";
+
+const normalizeBaseUrl = (value?: string) => {
+  const trimmed = value?.trim().replace(/\/+$/, "");
+  if (!trimmed) return API_PREFIX;
+  return trimmed.endsWith(API_PREFIX) ? trimmed : `${trimmed}${API_PREFIX}`;
+};
+
+const BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL as string | undefined);
 
 let authToken: string | null = localStorage.getItem("global_estates_token");
 let onSessionExpired: (() => void) | null = null;
