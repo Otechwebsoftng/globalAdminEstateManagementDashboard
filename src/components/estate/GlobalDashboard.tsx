@@ -98,11 +98,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
   const [newEstate, setNewEstate] = useState({
     name: "",
-    owner: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     address: "",
     city: "Lagos",
+    state: "Lagos",
     tier: "ENTERPRISE"
   });
   const [sendLoginDetails, setSendLoginDetails] = useState(true);
@@ -217,7 +219,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     queryFn: () => globalAdminApi.getDashboard(),
   });
 
-  const { data: estatesRaw, isLoading: isEstatesLoading } = useQuery({
+  const { data: estatesRaw, isLoading: isEstatesLoading, refetch: refetchEstates } = useQuery({
     queryKey: qk.estates,
     queryFn: () => estateApi.list(),
   });
@@ -288,27 +290,27 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     e.preventDefault();
     if (!newEstate.name || !newEstate.email) return;
     try {
-      const ownerParts = newEstate.owner.split(" ");
       await estateApi.onboard({
         estateName: newEstate.name,
-        firstName: ownerParts[0] || "",
-        lastName: ownerParts.slice(1).join(" ") || "",
+        firstName: newEstate.firstName,
+        lastName: newEstate.lastName,
         cac: "N/A",
         countryCode: "+234",
         phoneNumber: newEstate.phone || "0000000000",
         email: newEstate.email,
         address: newEstate.address || "N/A",
         city: newEstate.city,
-        state: "Lagos",
+        state: newEstate.state,
         country: "Nigeria",
       });
       queryClient.invalidateQueries({ queryKey: qk.estates });
+      await refetchEstates();
       showToast("Estate onboarded successfully");
     } catch (err: any) {
       showToast(err.message || "Failed to onboard estate");
     }
     setIsOnboardModalOpen(false);
-    setNewEstate({ name: "", owner: "", email: "", phone: "", address: "", city: "Lagos", tier: "ENTERPRISE" });
+    setNewEstate({ name: "", firstName: "", lastName: "", email: "", phone: "", address: "", city: "Lagos", state: "Lagos", tier: "ENTERPRISE" });
     setSendLoginDetails(true);
   };
 
@@ -2622,9 +2624,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                     <input
-                      type="text" required placeholder="John"
+                      type="text" required placeholder="John" value={newEstate.firstName}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                      onChange={(e) => setNewEstate({...newEstate, owner: e.target.value + ' ' + (newEstate.owner.split(' ')[1] || '')})}
+                      onChange={(e) => setNewEstate({...newEstate, firstName: e.target.value})}
                     />
                   </div>
                 </div>
@@ -2636,9 +2638,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                     <input
-                      type="text" required placeholder="Miller"
+                      type="text" required placeholder="Miller" value={newEstate.lastName}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                      onChange={(e) => setNewEstate({...newEstate, owner: (newEstate.owner.split(' ')[0] || '') + ' ' + e.target.value})}
+                      onChange={(e) => setNewEstate({...newEstate, lastName: e.target.value})}
                     />
                   </div>
                 </div>
@@ -2693,7 +2695,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     State
                   </label>
                   <div className="relative">
-                    <select className="w-full text-xs px-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold appearance-none">
+                    <select value={newEstate.state} onChange={(e) => setNewEstate({...newEstate, state: e.target.value})} className="w-full text-xs px-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold appearance-none">
                       <option>Lagos</option>
                       <option>Abuja</option>
                       <option>Surulere</option>
