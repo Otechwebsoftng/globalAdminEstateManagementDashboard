@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2, 
-  MapPin, Clock, DollarSign, Send, ClipboardList, Menu, X, CheckSquare, 
-  ChevronRight, ArrowUpRight, TrendingUp, AlertTriangle, KeyRound, Check, 
+import {
+  Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2,
+  MapPin, Clock, DollarSign, Send, ClipboardList, Menu, X, CheckSquare,
+  ChevronRight, ArrowUpRight, TrendingUp, AlertTriangle, KeyRound, Check,
   Star, RefreshCw, Lock, HelpCircle, FileText, Ban, Power, ShieldAlert,
   ChevronDown, MessageSquare, Laptop, Bell, Eye, Ban as BanIcon, ToggleLeft, Edit, MoreVertical,
   Mail, Phone, UserX, ArrowLeft
@@ -63,14 +63,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const location = useLocation();
   const auth = useAuth();
   const { showToast } = useToast();
-  
+
   const adminName = auth.user?.name || "Administrator";
-  
+
   const onLogout = () => {
     auth.logout();
     navigate("/login");
   };
-  
+
   // Derive activeMenu from URL path
   const activeMenu = useMemo(() => {
     const parts = location.pathname.split("/").filter(Boolean);
@@ -559,28 +559,28 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fontSize: 12, fontWeight: 700, fill: '#94a3b8' }}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fontSize: 12, fontWeight: 700, fill: '#94a3b8' }}
                   tickFormatter={(value) => `₦${(value / 1000000).toFixed(0)}M`}
                 />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(value) => [`₦${value.toLocaleString()}`, 'Revenue']}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#2563eb" 
-                  strokeWidth={3} 
-                  dot={{ r: 5, fill: '#2563eb' }} 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 5, fill: '#2563eb' }}
                   activeDot={{ r: 7, fill: '#2563eb' }}
                 />
               </LineChart>
@@ -599,7 +599,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           <h1 className="text-2xl font-black text-slate-900">Manage Estates</h1>
           <p className="text-sm text-gray-500 mt-1">View and manage all registered estates in the system</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsOnboardModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
         >
@@ -613,9 +613,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/30">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search estates..." 
+            <input
+              type="text"
+              placeholder="Search estates..."
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -668,7 +668,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <td className="py-4 px-6 font-bold text-gray-400">{estate.date}</td>
                   <td className="py-4 px-6 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button 
+                      <button
                         onClick={() => {
                           setSelectedEstateId(estate.id);
                         }}
@@ -676,7 +676,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           setEditingEstate(estate);
                           setIsEditModalOpen(true);
@@ -704,7 +704,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           <h1 className="text-2xl font-black text-slate-900">Manage Residents</h1>
           <p className="text-sm text-gray-500 mt-1">View and manage all registered residents</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAddResidentModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
         >
@@ -718,14 +718,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/30">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search residents..." 
+            <input
+              type="text"
+              placeholder="Search residents..."
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <select 
+            <select
               value={activeResidentTabState}
               onChange={(e) => setActiveResidentTabState(e.target.value as any)}
               className="text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white outline-none"
@@ -759,7 +759,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <tbody className="divide-y divide-gray-50">
               {residents.map((resident) => (
                 <tr key={resident.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td 
+                  <td
                     className="py-4 px-6 font-bold text-slate-900 cursor-pointer hover:text-blue-600"
                     onClick={() => {
                       setSelectedResidentId(resident.id);
@@ -780,7 +780,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <td className="py-4 px-6 font-bold text-gray-400">{resident.joinedDate}</td>
                   <td className="py-4 px-6 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button 
+                      <button
                         onClick={() => {
                           setEditingResident(resident);
                           setIsEditResidentModalOpen(true);
@@ -822,15 +822,15 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search staff..." 
+            <input
+              type="text"
+              placeholder="Search staff..."
               value={staffSearchText}
               onChange={(e) => setStaffSearchText(e.target.value)}
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <select 
+          <select
             value={staffStatusFilter}
             onChange={(e) => setStaffStatusFilter(e.target.value)}
             className="text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 bg-white outline-none"
@@ -839,7 +839,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
           </select>
-          <select 
+          <select
             value={staffShiftFilter}
             onChange={(e) => setStaffShiftFilter(e.target.value)}
             className="text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 bg-white outline-none"
@@ -851,7 +851,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <option value="Live - in">Live-in</option>
             <option value="Daytime">Daytime</option>
           </select>
-          <select 
+          <select
             value={staffTypeFilter}
             onChange={(e) => setStaffTypeFilter(e.target.value)}
             className="text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 bg-white outline-none"
@@ -884,7 +884,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <tbody className="divide-y divide-gray-50">
               {staffList.map((staff) => (
                 <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td 
+                  <td
                     className="py-4 px-6 font-bold text-slate-900 cursor-pointer hover:text-blue-600"
                     onClick={() => setSelectedStaff(staff)}
                   >
@@ -923,7 +923,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           <h1 className="text-2xl font-black text-slate-900">Manage Admins</h1>
           <p className="text-sm text-gray-500 mt-1">View and manage platform administrators</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdminModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
         >
@@ -937,9 +937,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-slate-50/30">
           <div className="relative w-64">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search admins..." 
+            <input
+              type="text"
+              placeholder="Search admins..."
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -1040,7 +1040,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
       {/* SIDEBAR NAVIGATION CONTROLS - LIGHT THEME EXACT COMPLIANCE */}
       <aside className="hidden lg:flex flex-col w-64 bg-white shrink-0 border-r border-gray-200">
-        
+
         {/* Profile Admin Badge */}
         <div className="p-5 border-b border-gray-100 bg-white flex items-center gap-3">
           <div className="h-9 w-9 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow shadow-blue-200 shrink-0">
@@ -1054,7 +1054,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
         {/* Vertical Actions Navigation items */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          
+
           <button
             onClick={() => navigate("/admin/dashboard")}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -1242,7 +1242,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
       {/* RIGHT COLUMN: header + content + footer */}
       <div className="flex-1 flex flex-col min-w-0">
-        
+
         {/* HEADER TOP BAR - collapsible search on mobile */}
         <header className="px-2 sm:px-6 py-3 sm:py-4.5 bg-white border-b border-gray-150 flex items-center justify-between shrink-0 min-h-[56px]">
           {/* Left section: hamburger + search */}
@@ -1268,8 +1268,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             {/* Desktop search input */}
             <div className="hidden lg:block relative w-64 xl:w-80">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search estates, admins or systems..."
                 className="w-full text-sm pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-1 focus:ring-blue-500"
               />
@@ -1289,16 +1289,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <span className="text-xs font-extrabold text-slate-950 block leading-tight">{adminName}</span>
                 <span className="text-[9.5px] text-gray-400 font-semibold block uppercase">Global Administrator</span>
               </div>
-              <img 
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                alt={adminName} 
+              <img
+                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                alt={adminName}
                 referrerPolicy="no-referrer"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-gray-150 object-cover shadow-sm bg-gray-200 shrink-0" 
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-gray-150 object-cover shadow-sm bg-gray-200 shrink-0"
               />
             </div>
 
             {/* Logout Button */}
-            <button 
+            <button
               onClick={onLogout}
               className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] sm:text-xs flex items-center gap-1 transition-all cursor-pointer border border-rose-100 shrink-0"
               title="Sign Out"
@@ -1337,7 +1337,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         )}
 
         {/* Mobile sidebar drawer */}
-        <div className={`lg:hidden`}> 
+        <div className={`lg:hidden`}>
           <div className={`fixed inset-0 z-40 ${isMobileNavOpen ? '' : 'pointer-events-none'}`}>
             <div
               className={`fixed inset-0 bg-black/40 transition-opacity ${isMobileNavOpen ? 'opacity-100' : 'opacity-0'}`}
@@ -1473,11 +1473,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
         {/* CONTAINER SHELL CONTENT PANELS */}
         <div className="p-6 max-w-7xl w-full mx-auto space-y-6 flex-1">
-          
+
           {/* TAB 1: OVERVIEW DASHBOARD */}
           {activeMenu === "dashboard" && (
             <div className="space-y-6 animate-fade-in text-slate-900">
-              
+
               {/* Header Greetings subtitle */}
               <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
@@ -1500,7 +1500,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* KPI metrics micro deck precisely matched to the image */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
+
                 <div onClick={() => navigate("/admin/estates")} className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between hover:border-blue-400 cursor-pointer transition-colors group">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total Estates</span>
@@ -1581,7 +1581,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* TWIN GRAPHS AND HEALTH BOARD PANELS */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                
+
                 {/* Left side chart: Platform Revenue growth */}
                 <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between shadow-sm">
                   <div>
@@ -1618,7 +1618,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     <h3 className="text-xs font-extrabold text-slate-900 border-b border-gray-100 pb-3 block uppercase tracking-wider">System Health</h3>
 
                     <div className="mt-4 space-y-3.5">
-                      
+
                       {[
                         { name: "Access Control Hub", stats: "Latency: 12ms", state: "Optimal" },
                         { name: "Visitor Management", stats: "Active Sessions: 12,400", state: "Optimal" },
@@ -1715,7 +1715,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                           </td>
                           <td className="py-3.5 px-2 font-medium text-gray-500">{est.date}</td>
                           <td className="py-3.5 px-2 text-right">
-                            <button 
+                            <button
                               onClick={() => {
                                 alert(`Opening command config parameters for ${est.name}`);
                               }}
@@ -1737,9 +1737,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           {/* TAB 2: ESTATES DIRECTORY - TABLE VIEW AS PER IMAGE */}
           {activeMenu === "estates" && (
             selectedEstateId ? (
-              <EstateDetailView 
-                estate={estates.find(e => e.id === selectedEstateId)} 
-                onBack={() => setSelectedEstateId(null)} 
+              <EstateDetailView
+                estate={estates.find(e => e.id === selectedEstateId)}
+                onBack={() => setSelectedEstateId(null)}
                 onEdit={(est) => { setEditingEstate(est); setIsEditModalOpen(true); }}
               />
             ) : (
@@ -1753,7 +1753,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       Manage and monitor 1,234 registered communities and their operational status.
                     </p>
                   </div>
-                  
+
                   <button
                     onClick={() => setIsOnboardModalOpen(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center gap-2"
@@ -1767,8 +1767,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <div className="bg-white p-4 rounded-2xl border border-gray-150 shadow-sm flex flex-col sm:flex-row gap-4 items-center">
                   <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Search estates, admins or systems..."
                       className="w-full text-sm pl-9 pr-3 py-2 border border-gray-100 rounded-xl bg-slate-50/50 outline-none"
                     />
@@ -1804,7 +1804,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                         {estates.map((est, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                             <td className="py-4 px-6">
-                              <div 
+                              <div
                                 onClick={() => setSelectedEstateId(est.id)}
                                 className="flex items-center gap-3 cursor-pointer group/name w-fit"
                               >
@@ -1855,7 +1855,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   {/* Pagination matched to image bottom */}
                   <div className="p-4 border-t border-gray-50 flex justify-between items-center text-[10px] font-bold text-gray-400">
                     <span>1 - 10 of 1,234 Estates</span>
@@ -1872,9 +1872,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           {/* TAB 3: RESIDENTS DIRECTORY */}
           {activeMenu === "residents" && (
             selectedResidentId ? (
-              <ResidentDetailView 
-                resident={residents.find(r => r.id === selectedResidentId)} 
-                onBack={() => setSelectedResidentId(null)} 
+              <ResidentDetailView
+                resident={residents.find(r => r.id === selectedResidentId)}
+                onBack={() => setSelectedResidentId(null)}
               />
             ) : (
               <div className="space-y-6 animate-fade-in text-slate-900">
@@ -1903,8 +1903,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <div className="bg-white p-4 rounded-2xl border border-gray-150 shadow-sm flex flex-col sm:flex-row gap-4 items-center">
                   <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Search residents..."
                       className="w-full text-sm pl-9 pr-3 py-2 border border-gray-100 rounded-xl bg-slate-50/50 outline-none"
                     />
@@ -1946,7 +1946,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                         {residents.map((res, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                             <td className="py-4 px-6">
-                              <div 
+                              <div
                                 onClick={() => setSelectedResidentId(res.id)}
                                 className="flex items-center gap-3 cursor-pointer group/name w-fit"
                               >
@@ -1985,7 +1985,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                   <Edit className="h-3.5 w-3.5 text-amber-600" />
                                   <span>Edit Details</span>
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => {
                                     if(window.confirm(`Suspend access for ${res.name}?`)) {
                                       setResidents(residents.map(r => r.id === res.id ? {...r, status: r.status === 'Active' ? 'Suspended' : 'Active'} : r));
@@ -1996,7 +1996,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                   <ShieldAlert className="h-3.5 w-3.5" />
                                   <span>{res.status === 'Active' ? 'Suspend Access' : 'Restore Access'}</span>
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => {
                                     if(window.confirm(`Deactivate and remove ${res.name} from records?`)) {
                                       setResidents(residents.filter(r => r.id !== res.id));
@@ -2014,7 +2014,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   {/* Pagination matched to image bottom */}
                   <div className="p-4 border-t border-gray-50 flex justify-between items-center text-[10px] font-bold text-gray-400">
                     <span>1 - 10 of 1,234 Residents</span>
@@ -2031,7 +2031,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           {/* TAB 4: DOMESTIC & STAFF DATABASE - MATCHES IMAGE 2 STATS, TABLES AND DROPDOWNS PERFECTLY */}
           {activeMenu === "staff" && (
             <div className="space-y-6 animate-fade-in text-slate-800">
-              
+
               {/* Headings */}
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
@@ -2044,7 +2044,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* Four Metric boxes strictly compliant with photo */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
+
                 <div className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total Staff</span>
@@ -2101,7 +2101,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* Staff Table card strictly following image */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                
+
                 {/* Header title */}
                 <div className="px-6 py-4.5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-2xl">
                   <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">Staff Table</h3>
@@ -2109,12 +2109,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                 {/* Filters Row */}
                 <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 items-center bg-gray-50/40 font-sans">
-                  
+
                   {/* Search Bar */}
                   <div className="relative w-full sm:w-60">
                     <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Search staff name..."
                       value={staffSearchText}
                       onChange={(e) => setStaffSearchText(e.target.value)}
@@ -2124,10 +2124,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                   {/* Filter elements */}
                   <div className="flex flex-wrap items-center gap-2">
-                    
+
                     {/* Status Dropdown */}
                     <div className="relative text-xs">
-                      <select 
+                      <select
                         value={staffStatusFilter}
                         onChange={(e) => setStaffStatusFilter(e.target.value)}
                         className="appearance-none pr-7 pl-3 py-1.5 bg-white border border-gray-200 rounded-xl font-medium text-slate-700 outline-none"
@@ -2141,7 +2141,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                     {/* Shift Dropdown */}
                     <div className="relative text-xs">
-                      <select 
+                      <select
                         value={staffShiftFilter}
                         onChange={(e) => setStaffShiftFilter(e.target.value)}
                         className="appearance-none pr-7 pl-3 py-1.5 bg-white border border-gray-200 rounded-xl font-medium text-slate-700 outline-none"
@@ -2158,7 +2158,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                     {/* Type Dropdown */}
                     <div className="relative text-xs">
-                      <select 
+                      <select
                         value={staffTypeFilter}
                         onChange={(e) => setStaffTypeFilter(e.target.value)}
                         className="appearance-none pr-7 pl-3 py-1.5 bg-white border border-gray-200 rounded-xl font-medium text-slate-700 outline-none"
@@ -2243,7 +2243,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                               </span>
                             </td>
                             <td className="py-3.5 px-4 text-center relative">
-                              
+
                               {/* Trigger actions popover */}
                               <ActionMenu
                                 trigger={<span className="p-1 px-2.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-slate-900 transition-colors inline-flex cursor-pointer"><span className="text-sm font-black tracking-widest">•••</span></span>}
@@ -2296,7 +2296,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           {/* TAB 5: ADMINS MANAGEMENT VIEW - EXACT COMPLIANCE WITH REPEATED JAMES WILLSON */}
           {activeMenu === "admins" && (
             <div className="space-y-6 animate-fade-in text-slate-900">
-              
+
               <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900">
@@ -2306,10 +2306,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     Manage administrative access and permissions for the global platform.
                   </p>
                 </div>
-                
+
                 <button
                   onClick={() => setIsAdminModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2+ rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="h-4 w-4 stroke-[2.5]" />
                   <span>Onboard New Admin</span>
@@ -2318,7 +2318,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* Admin KPI card boxes - strictly matched to first visual */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                
+
                 <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Total Admin</span>
                   <span className="text-2xl font-black text-slate-950 block mt-1">{adminsList.length}</span>
@@ -2347,7 +2347,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* Admins Table Container strictly style matched */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                
+
                 <div className="px-6 py-4 border-b border-gray-100">
                   <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">Admin</h3>
                 </div>
@@ -2501,7 +2501,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
+
                 <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Starter Tier</span>
@@ -2568,7 +2568,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div className="pt-4 border-t border-gray-100 max-w-sm mx-auto">
-                <button 
+                <button
                   onClick={() => navigate("/admin/dashboard")}
                   className="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded-xl font-bold text-xs cursor-pointer"
                 >
@@ -2597,7 +2597,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {isOnboardModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4">
           <div className="bg-white rounded-[32px] w-full max-w-2xl p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
-            <button 
+            <button
               className="absolute top-6 right-6 text-gray-400 hover:text-slate-900 transition-colors"
               onClick={() => setIsOnboardModalOpen(false)}
             >
@@ -2621,8 +2621,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="text" required placeholder="John" 
+                    <input
+                      type="text" required placeholder="John"
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
                       onChange={(e) => setNewEstate({...newEstate, owner: e.target.value + ' ' + (newEstate.owner.split(' ')[1] || '')})}
                     />
@@ -2635,8 +2635,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="text" required placeholder="Miller" 
+                    <input
+                      type="text" required placeholder="Miller"
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
                       onChange={(e) => setNewEstate({...newEstate, owner: (newEstate.owner.split(' ')[0] || '') + ' ' + e.target.value})}
                     />
@@ -2649,7 +2649,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" required placeholder="Sunset Valley Properties" value={newEstate.name}
                       onChange={(e) => setNewEstate({...newEstate, name: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
@@ -2663,7 +2663,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="email" required placeholder="youremail@gmail.com" value={newEstate.email}
                       onChange={(e) => setNewEstate({...newEstate, email: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
@@ -2679,7 +2679,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     <div className="w-16 h-12 bg-slate-50 border border-gray-200 rounded-xl flex items-center justify-center text-[10px] font-black text-gray-400">+234</div>
                     <div className="relative flex-1">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                      <input 
+                      <input
                         type="text" required placeholder="803 - 533 - 5432" value={newEstate.phone}
                         onChange={(e) => setNewEstate({...newEstate, phone: e.target.value})}
                         className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
@@ -2708,7 +2708,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <MapPin className="absolute left-4 top-4 h-3.5 w-3.5 text-gray-400" />
-                    <textarea 
+                    <textarea
                       rows={2} placeholder="e.g Suite 402, Marble Towers, Kingsway Road" value={newEstate.address}
                       onChange={(e) => setNewEstate({...newEstate, address: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200 resize-none"
@@ -2722,7 +2722,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" placeholder="Surulere" value={newEstate.city}
                       onChange={(e) => setNewEstate({...newEstate, city: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
@@ -2740,14 +2740,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button 
+                <button
                   type="button" onClick={() => setIsOnboardModalOpen(false)}
                   className="flex-1 py-4 bg-slate-50 text-slate-600 text-xs font-black rounded-2xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="h-4 w-4" />
                   Cancel Onboarding
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 py-4 bg-blue-600 text-white text-xs font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
                 >
@@ -2764,7 +2764,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {isEditModalOpen && editingEstate && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4">
           <div className="bg-white rounded-[32px] w-full max-w-2xl p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
-            <button 
+            <button
               className="absolute top-6 right-6 text-gray-400 hover:text-slate-900 transition-colors"
               onClick={() => { setIsEditModalOpen(false); setEditingEstate(null); }}
             >
@@ -2788,7 +2788,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" required value={editingEstate.owner}
                       onChange={(e) => setEditingEstate({...editingEstate, owner: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -2802,7 +2802,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" required value={editingEstate.name}
                       onChange={(e) => setEditingEstate({...editingEstate, name: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -2816,7 +2816,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="email" required value={editingEstate.email}
                       onChange={(e) => setEditingEstate({...editingEstate, email: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -2830,7 +2830,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" value={editingEstate.phone}
                       onChange={(e) => setEditingEstate({...editingEstate, phone: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -2844,7 +2844,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <MapPin className="absolute left-4 top-4 h-3.5 w-3.5 text-gray-400" />
-                    <textarea 
+                    <textarea
                       rows={2} value={editingEstate.address}
                       onChange={(e) => setEditingEstate({...editingEstate, address: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold resize-none"
@@ -2858,7 +2858,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" value={editingEstate.city}
                       onChange={(e) => setEditingEstate({...editingEstate, city: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -2869,14 +2869,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button 
+                <button
                   type="button" onClick={() => { setIsEditModalOpen(false); setEditingEstate(null); }}
                   className="flex-1 py-4 bg-slate-50 text-slate-600 text-xs font-black rounded-2xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="h-4 w-4" />
                   Discard Changes
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 py-4 bg-slate-900 text-white text-xs font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
                 >
@@ -2892,7 +2892,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {isVisitorModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-gray-200 shadow-2xl relative">
-            <button 
+            <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-650"
               onClick={() => setIsVisitorModalOpen(false)}
             >
@@ -2909,7 +2909,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             </div>
 
             <div className="space-y-4 py-2 text-xs text-slate-700">
-              
+
               {/* Passcode Block strictly matched to third picture widget style */}
               <div className="relative p-5 bg-slate-50 border border-gray-200 rounded-2xl text-center">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block font-mono">Visitor's Code Details</span>
@@ -2917,7 +2917,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   {vPassCode}
                 </span>
 
-                <button 
+                <button
                   onClick={generatePasscode}
                   className="mt-3 text-[10px] bg-white hover:bg-gray-50 text-blue-600 font-bold py-1 px-3 rounded-md border border-gray-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
                 >
@@ -2945,13 +2945,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             </div>
 
             <div className="mt-6 flex gap-2">
-              <button 
+              <button
                 onClick={() => setIsVisitorModalOpen(false)}
                 className="flex-1 py-2.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold rounded-xl cursor-pointer"
               >
                 Close details
               </button>
-              <button 
+              <button
                 onClick={() => {
                   navigator.clipboard.writeText(`${vPassCode}`);
                   alert("Copied code to clipboard!");
@@ -2970,9 +2970,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {selectedStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 border border-gray-250 shadow-2xl relative animate-fade-in font-sans text-slate-800">
-            
+
             {/* Top Close button and edit pencil */}
-            <button 
+            <button
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 outline-none transition-colors"
               onClick={() => setSelectedStaff(null)}
             >
@@ -2991,19 +2991,19 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
             {/* Profile Avatar, Identity text details exactly from photo */}
             <div className="flex items-center gap-4.5 pb-5 border-b border-gray-100">
-              <img 
-                src={selectedStaff.gender === "Female" 
-                  ? "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+              <img
+                src={selectedStaff.gender === "Female"
+                  ? "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                   : "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                } 
-                alt={selectedStaff.name} 
+                }
+                alt={selectedStaff.name}
                 referrerPolicy="no-referrer"
-                className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-gray-100" 
+                className="h-14 w-14 rounded-full border border-gray-200 object-cover bg-gray-100"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="font-extrabold text-slate-900 text-base leading-none block truncate">{selectedStaff.name}</h4>
-                  
+
                   {/* Status card Badge matched strictly to image: green border, light text */}
                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50/70 py-1 px-3 border border-emerald-150 rounded-full font-mono shrink-0">
                     ● Active
@@ -3019,7 +3019,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             {/* Visual description grid */}
             <div className="py-4 space-y-3 font-sans text-xs border-b border-gray-100">
               <div className="grid grid-cols-2 gap-y-3.5">
-                
+
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] uppercase font-bold text-gray-400">Role :</span>
                   <span className="font-extrabold text-blue-600 font-sans">{selectedStaff.role}</span>
@@ -3051,7 +3051,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             {/* Activity Logs inside Details exactly matched */}
             <div className="py-4 font-sans text-xs">
               <h5 className="text-[10.5px] font-black uppercase text-slate-900 tracking-wider mb-2.5">Activity Logs</h5>
-              
+
               <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
                 <table className="w-full text-left font-sans text-[11px] text-slate-700">
                   <thead>
@@ -3074,9 +3074,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
             {/* Bottom Capsule Buttons matching the third image */}
             <div className="mt-5 pt-4 border-t border-gray-150 flex gap-3.5">
-              
+
               {/* Deactivate Button */}
-              <button 
+              <button
                 onClick={() => {
                   const confirmToggle = window.confirm(`Deactivate staff access rights for ${selectedStaff.name}?`);
                   if (confirmToggle) {
@@ -3090,7 +3090,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </button>
 
               {/* Suspend Access Button */}
-              <button 
+              <button
                 onClick={() => {
                   const confirmToggle = window.confirm(`Suspend access license keys temporarily for ${selectedStaff.name}?`);
                   if (confirmToggle) {
@@ -3113,7 +3113,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {isAdminModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-gray-200 shadow-2xl relative">
-            <button 
+            <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-650"
               onClick={() => setIsAdminModalOpen(false)}
             >
@@ -3133,7 +3133,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">First Name</label>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="e.g. Abdul"
@@ -3144,7 +3144,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Last Name</label>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="e.g. Suleiman"
@@ -3157,7 +3157,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Workspace Email</label>
-                <input 
+                <input
                   type="email"
                   required
                   placeholder="e.g. abdul@globalestates.ng"
@@ -3171,7 +3171,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Phone Number</label>
                 <div className="flex gap-2">
                   <div className="w-16 h-[34px] bg-slate-50 border border-gray-200 rounded-lg flex items-center justify-center text-[10px] font-black text-gray-400">+234</div>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="e.g. 803 533 5432"
@@ -3334,7 +3334,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {isAddResidentModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4">
           <div className="bg-white rounded-[32px] w-full max-w-2xl p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
-            <button 
+            <button
               className="absolute top-6 right-6 text-gray-400 hover:text-slate-900 transition-colors"
               onClick={() => setIsAddResidentModalOpen(false)}
             >
@@ -3349,7 +3349,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </p>
             </div>
 
-            <form 
+            <form
               onSubmit={(e) => {
                 e.preventDefault();
                 const added = {
@@ -3366,15 +3366,15 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               className="space-y-7"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
-                
+
                 <div className="relative">
                   <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
                     Full Name
                   </label>
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="text" required placeholder="e.g Chikwendu Emmanuel" 
+                    <input
+                      type="text" required placeholder="e.g Chikwendu Emmanuel"
                       value={newResident.name}
                       onChange={(e) => setNewResident({...newResident, name: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3388,8 +3388,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="email" required placeholder="youremail@gmail.com" 
+                    <input
+                      type="email" required placeholder="youremail@gmail.com"
                       value={newResident.email}
                       onChange={(e) => setNewResident({...newResident, email: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3403,8 +3403,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="text" required placeholder="+234 803 587 6754" 
+                    <input
+                      type="text" required placeholder="+234 803 587 6754"
                       value={newResident.phone}
                       onChange={(e) => setNewResident({...newResident, phone: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3418,8 +3418,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
-                      type="text" required placeholder="e.g Unit 12A" 
+                    <input
+                      type="text" required placeholder="e.g Unit 12A"
                       value={newResident.houseNo}
                       onChange={(e) => setNewResident({...newResident, houseNo: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3430,14 +3430,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button 
+                <button
                   type="button" onClick={() => setIsAddResidentModalOpen(false)}
                   className="flex-1 py-4 bg-slate-50 text-slate-600 text-xs font-black rounded-2xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="h-4 w-4" />
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 py-4 bg-blue-600 text-white text-xs font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
                 >
@@ -3454,7 +3454,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {isEditResidentModalOpen && editingResident && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4">
           <div className="bg-white rounded-[32px] w-full max-w-2xl p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
-            <button 
+            <button
               className="absolute top-6 right-6 text-gray-400 hover:text-slate-900 transition-colors"
               onClick={() => { setIsEditResidentModalOpen(false); setEditingResident(null); }}
             >
@@ -3471,14 +3471,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
             <form onSubmit={handleEditResidentSubmit} className="space-y-7">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
-                
+
                 <div className="relative">
                   <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
                     Full Name
                   </label>
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" required value={editingResident.name}
                       onChange={(e) => setEditingResident({...editingResident, name: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3492,7 +3492,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="email" required value={editingResident.email}
                       onChange={(e) => setEditingResident({...editingResident, email: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3506,7 +3506,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" required value={editingResident.phone}
                       onChange={(e) => setEditingResident({...editingResident, phone: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3520,7 +3520,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   </label>
                   <div className="relative">
                     <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input 
+                    <input
                       type="text" required value={editingResident.houseNo}
                       onChange={(e) => setEditingResident({...editingResident, houseNo: e.target.value})}
                       className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold"
@@ -3531,14 +3531,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button 
+                <button
                   type="button" onClick={() => { setIsEditResidentModalOpen(false); setEditingResident(null); }}
                   className="flex-1 py-4 bg-slate-50 text-slate-600 text-xs font-black rounded-2xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="h-4 w-4" />
                   Discard Changes
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 py-4 bg-slate-900 text-white text-xs font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
                 >
