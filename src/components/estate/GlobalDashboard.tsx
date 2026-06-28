@@ -58,6 +58,38 @@ const revenueData = [
   { name: "Dec", revenue: 16000000 }
 ];
 
+const toSearchText = (value: unknown) => String(value ?? "").toLowerCase();
+
+const matchesSearchTerms = (fields: unknown[], ...queries: string[]) => {
+  const terms = queries.map((query) => query.trim().toLowerCase()).filter(Boolean);
+  if (terms.length === 0) return true;
+  return terms.every((term) => fields.some((field) => toSearchText(field).includes(term)));
+};
+
+const formatDisplayDate = (value: unknown) => {
+  if (!value) return "";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+};
+
+const getResidentName = (resident: any) =>
+  resident?.name || `${resident?.firstName || ""} ${resident?.lastName || ""}`.trim();
+
+const getResidentPhone = (resident: any) => resident?.phone || resident?.phoneNumber || "";
+
+const getResidentEstate = (resident: any) => resident?.estate || resident?.estateName || "";
+
+const getResidentJoinedDate = (resident: any) =>
+  resident?.joinedDate || formatDisplayDate(resident?.createdAt);
+
+const getResidentInitials = (resident: any) => {
+  const name = getResidentName(resident);
+  return name
+    ? name.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 3).toUpperCase()
+    : "R";
+};
+
 export default function GlobalDashboard({}: GlobalDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -99,6 +131,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [isEstateMenuExpanded, setIsEstateMenuExpanded] = useState(true);
 
   // Search and select dropdowns filters state
+  const [globalSearchText, setGlobalSearchText] = useState("");
+  const [estateSearchText, setEstateSearchText] = useState("");
+  const [residentSearchText, setResidentSearchText] = useState("");
+  const [residentStatusFilter, setResidentStatusFilter] = useState("All");
+  const [adminSearchText, setAdminSearchText] = useState("");
   const [staffSearchText, setStaffSearchText] = useState("");
   const [staffStatusFilter, setStaffStatusFilter] = useState("All");
   const [staffShiftFilter, setStaffShiftFilter] = useState("All Shift");
@@ -117,7 +154,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [isResidentsLoading, setIsResidentsLoading] = useState(true);
 
-  const [activeResidentTabState, setActiveResidentTabState] = useState<"All" | "Lagos" | "Abuja" | "Port Harcourt">("All");
+  const [activeResidentTabState, setActiveResidentTabState] = useState("All");
   // Track selected estate for detail view (derived from URL)
   const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
 
@@ -284,6 +321,95 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       lastActivity: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
     }));
   }, [adminsRaw]);
+
+  const filteredEstates = useMemo(() => (
+    estates.filter((estate) =>
+      matchesSearchTerms(
+        [
+          estate.name,
+          estate.owner,
+          estate.email,
+          estate.phone,
+          estate.address,
+          estate.city,
+          estate.state,
+          estate.country,
+          estate.tier,
+          estate.status,
+          estate.date,
+        ],
+        globalSearchText,
+        estateSearchText,
+      )
+    )
+  ), [estates, globalSearchText, estateSearchText]);
+
+  const filteredResidents = useMemo(() => (
+    residents.filter((resident: any) => {
+      const locationFilter = activeResidentTabState.trim().toLowerCase();
+      const statusFilter = residentStatusFilter.trim().toLowerCase();
+      const estateName = getResidentEstate(resident);
+      const status = resident?.status || "Active";
+
+      if (locationFilter !== "all" && !toSearchText(estateName).includes(locationFilter)) return false;
+      if (statusFilter !== "all" && toSearchText(status) !== statusFilter) return false;
+
+      return matchesSearchTerms(
+        [
+          getResidentName(resident),
+          resident?.email,
+          getResidentPhone(resident),
+          estateName,
+          resident?.houseNo,
+          status,
+          getResidentJoinedDate(resident),
+        ],
+        globalSearchText,
+        residentSearchText,
+      );
+    })
+  ), [residents, activeResidentTabState, residentStatusFilter, globalSearchText, residentSearchText]);
+
+  const residentEstateOptions = useMemo(() => {
+    const options = new Set<string>();
+    residents.forEach((resident: any) => {
+      const estateName = getResidentEstate(resident);
+      if (estateName) options.add(estateName);
+    });
+    return Array.from(options).sort((a, b) => a.localeCompare(b));
+  }, [residents]);
+
+  const filteredStaffList = useMemo(() => (
+    staffList.filter((staff) => {
+      if (staffStatusFilter !== "All" && staff.status !== staffStatusFilter) return false;
+      if (staffShiftFilter !== "All Shift" && toSearchText(staff.shift) !== toSearchText(staffShiftFilter)) return false;
+      if (staffTypeFilter !== "All" && !toSearchText(staff.role).includes(toSearchText(staffTypeFilter))) return false;
+
+      return matchesSearchTerms(
+        [staff.name, staff.role, staff.assignedTo, staff.estate, staff.shift, staff.status, staff.added],
+        globalSearchText,
+        staffSearchText,
+      );
+    })
+  ), [staffList, staffSearchText, staffStatusFilter, staffShiftFilter, staffTypeFilter, globalSearchText]);
+
+  const filteredAdminsList = useMemo(() => (
+    adminsList.filter((admin) =>
+      matchesSearchTerms(
+        [
+          admin.name,
+          admin.firstName,
+          admin.lastName,
+          admin.email,
+          admin.role,
+          admin.status,
+          admin.lastActivity,
+        ],
+        globalSearchText,
+        adminSearchText,
+      )
+    )
+  ), [adminsList, globalSearchText, adminSearchText]);
 
   const rolesList: Role[] = useMemo(() => parseList(rolesRaw, "roles", "result"), [rolesRaw]);
   const menuItems: MenuItem[] = useMemo(() => parseList(menuRaw, "menus", "result"), [menuRaw]);
@@ -642,6 +768,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <input
               type="text"
               placeholder="Search estates..."
+              value={estateSearchText}
+              onChange={(e) => setEstateSearchText(e.target.value)}
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -675,7 +803,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <tbody className="divide-y divide-gray-50">
               {isEstatesLoading ? (
                 <tr><td colSpan={7} className="py-12"><TableSkeleton rows={5} cols={7} /></td></tr>
-              ) : estates.map((estate) => (
+              ) : filteredEstates.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center font-bold text-gray-400">
+                    No estates match your search.
+                  </td>
+                </tr>
+              ) : filteredEstates.map((estate) => (
                 <tr key={estate.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6 font-bold text-slate-900">{estate.name}</td>
                   <td className="py-4 px-6 font-bold text-gray-500">{estate.owner}</td>
@@ -747,6 +881,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <input
               type="text"
               placeholder="Search residents..."
+              value={residentSearchText}
+              onChange={(e) => setResidentSearchText(e.target.value)}
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -761,10 +897,15 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               <option value="Abuja">Abuja</option>
               <option value="Port Harcourt">Port Harcourt</option>
             </select>
-            <select className="text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white outline-none">
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Inactive</option>
+            <select
+              value={residentStatusFilter}
+              onChange={(e) => setResidentStatusFilter(e.target.value)}
+              className="text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white outline-none"
+            >
+              <option value="All">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Suspended">Suspended</option>
             </select>
           </div>
         </div>
@@ -783,7 +924,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {residents.map((resident) => (
+              {filteredResidents.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center font-bold text-gray-400">
+                    No residents match your search.
+                  </td>
+                </tr>
+              ) : filteredResidents.map((resident: any) => (
                 <tr key={resident.id} className="hover:bg-slate-50/50 transition-colors">
                   <td
                     className="py-4 px-6 font-bold text-slate-900 cursor-pointer hover:text-blue-600"
@@ -791,19 +938,19 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       setSelectedResidentId(resident.id);
                     }}
                   >
-                    {resident.name}
+                    {getResidentName(resident)}
                   </td>
                   <td className="py-4 px-6 font-bold text-gray-500">{resident.email}</td>
-                  <td className="py-4 px-6 font-bold text-gray-500 font-mono">{resident.phone}</td>
-                  <td className="py-4 px-6 font-bold text-gray-500">{resident.estate}</td>
+                  <td className="py-4 px-6 font-bold text-gray-500 font-mono">{getResidentPhone(resident)}</td>
+                  <td className="py-4 px-6 font-bold text-gray-500">{getResidentEstate(resident)}</td>
                   <td className="py-4 px-6 font-black text-blue-600">{resident.houseNo}</td>
                   <td className="py-4 px-6">
                     <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
                       <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />
-                      {resident.status}
+                      {resident.status || "Active"}
                     </span>
                   </td>
-                  <td className="py-4 px-6 font-bold text-gray-400">{resident.joinedDate}</td>
+                  <td className="py-4 px-6 font-bold text-gray-400">{getResidentJoinedDate(resident)}</td>
                   <td className="py-4 px-6 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -908,7 +1055,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {staffList.map((staff) => (
+              {filteredStaffList.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center font-bold text-gray-400">
+                    No staff match your search.
+                  </td>
+                </tr>
+              ) : filteredStaffList.map((staff) => (
                 <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
                   <td
                     className="py-4 px-6 font-bold text-slate-900 cursor-pointer hover:text-blue-600"
@@ -966,6 +1119,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <input
               type="text"
               placeholder="Search admins..."
+              value={adminSearchText}
+              onChange={(e) => setAdminSearchText(e.target.value)}
               className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -985,7 +1140,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <tbody className="divide-y divide-gray-50">
               {isAdminsLoading ? (
                 <tr><td colSpan={6} className="py-12"><TableSkeleton rows={5} cols={6} /></td></tr>
-              ) : adminsList.map((admin) => (
+              ) : filteredAdminsList.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center font-bold text-gray-400">
+                    No admins match your search.
+                  </td>
+                </tr>
+              ) : filteredAdminsList.map((admin) => (
                 <tr key={admin.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6 font-bold text-slate-900">{admin.name}</td>
                   <td className="py-4 px-6 font-bold text-gray-500 font-mono">{admin.email}</td>
@@ -1297,6 +1458,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
               <input
                 type="text"
                 placeholder="Search estates, admins or systems..."
+                value={globalSearchText}
+                onChange={(e) => setGlobalSearchText(e.target.value)}
                 className="w-full text-sm pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -1351,6 +1514,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <input
                   type="text"
                   placeholder="Search estates, admins or systems..."
+                  value={globalSearchText}
+                  onChange={(e) => setGlobalSearchText(e.target.value)}
                   className="w-full text-sm pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-1 focus:ring-blue-500"
                   autoFocus
                 />
@@ -1718,8 +1883,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {estates.map((est, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
+                      {filteredEstates.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center font-bold text-gray-400">
+                            No estates match your search.
+                          </td>
+                        </tr>
+                      ) : filteredEstates.map((est) => (
+                        <tr key={est.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
                           <td className="py-3.5 px-2 flex items-center gap-3">
                             <div className="h-8 w-8 rounded bg-blue-100 text-blue-600 font-extrabold text-xs flex items-center justify-center font-mono">
                               SV
@@ -1796,6 +1967,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     <input
                       type="text"
                       placeholder="Search estates, admins or systems..."
+                      value={estateSearchText}
+                      onChange={(e) => setEstateSearchText(e.target.value)}
                       className="w-full text-sm pl-9 pr-3 py-2 border border-gray-100 rounded-xl bg-slate-50/50 outline-none"
                     />
                   </div>
@@ -1804,7 +1977,10 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       <Search className="h-3.5 w-3.5" />
                       Subscription
                     </button>
-                    <button className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-400">
+                    <button
+                      onClick={() => setEstateSearchText("")}
+                      className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-400"
+                    >
                       Clear All
                     </button>
                   </div>
@@ -1827,8 +2003,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {estates.map((est, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                        {filteredEstates.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="py-12 text-center font-bold text-gray-400">
+                              No estates match your search.
+                            </td>
+                          </tr>
+                        ) : filteredEstates.map((est) => (
+                          <tr key={est.id} className="hover:bg-slate-50/50 transition-colors group">
                             <td className="py-4 px-6">
                               <div
                                 onClick={() => setSelectedEstateId(est.id)}
@@ -1884,7 +2066,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                   {/* Pagination matched to image bottom */}
                   <div className="p-4 border-t border-gray-50 flex justify-between items-center text-[10px] font-bold text-gray-400">
-                    <span>1 - 10 of 1,234 Estates</span>
+                    <span>{filteredEstates.length} of {estates.length} Estates</span>
                     <div className="flex gap-4">
                       <button className="hover:text-slate-900 disabled:opacity-30 uppercase tracking-widest">← Previous</button>
                       <button className="hover:text-slate-900 uppercase tracking-widest">Next →</button>
@@ -1932,23 +2114,42 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     <input
                       type="text"
                       placeholder="Search residents..."
+                      value={residentSearchText}
+                      onChange={(e) => setResidentSearchText(e.target.value)}
                       className="w-full text-sm pl-9 pr-3 py-2 border border-gray-100 rounded-xl bg-slate-50/50 outline-none"
                     />
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
-                    <select className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600 outline-none">
-                      <option>Estate</option>
-                      <option>Lagos</option>
-                      <option>Abuja</option>
+                    <select
+                      value={activeResidentTabState}
+                      onChange={(e) => setActiveResidentTabState(e.target.value)}
+                      className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600 outline-none"
+                    >
+                      <option value="All">All Estates</option>
+                      {residentEstateOptions.map((estateName) => (
+                        <option key={estateName} value={estateName}>{estateName}</option>
+                      ))}
                     </select>
-                    <select className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600 outline-none">
-                      <option>Status</option>
-                      <option>Active</option>
-                      <option>Suspended</option>
+                    <select
+                      value={residentStatusFilter}
+                      onChange={(e) => setResidentStatusFilter(e.target.value)}
+                      className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600 outline-none"
+                    >
+                      <option value="All">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Suspended">Suspended</option>
                     </select>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600">
-                      <Clock className="h-3.5 w-3.5" />
-                      Date Joined
+                    <button
+                      onClick={() => {
+                        setResidentSearchText("");
+                        setActiveResidentTabState("All");
+                        setResidentStatusFilter("All");
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Clear
                     </button>
                   </div>
                 </div>
@@ -1969,29 +2170,35 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {residents.map((res, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                        {filteredResidents.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="py-12 text-center font-bold text-gray-400">
+                              No residents match your search.
+                            </td>
+                          </tr>
+                        ) : filteredResidents.map((res: any) => (
+                          <tr key={res.id} className="hover:bg-slate-50/50 transition-colors group">
                             <td className="py-4 px-6">
                               <div
                                 onClick={() => setSelectedResidentId(res.id)}
                                 className="flex items-center gap-3 cursor-pointer group/name w-fit"
                               >
                                 <div className="h-8 w-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-black text-[10px] border border-blue-100 group-hover/name:bg-blue-600 group-hover/name:text-white transition-all">
-                                  {res.name.split(' ').map(n => n[0]).join('')}
+                                  {getResidentInitials(res)}
                                 </div>
-                                <span className="font-black text-slate-900 group-hover/name:text-blue-600 transition-colors">{res.name}</span>
+                                <span className="font-black text-slate-900 group-hover/name:text-blue-600 transition-colors">{getResidentName(res)}</span>
                               </div>
                             </td>
-                            <td className="py-4 px-6 font-bold text-gray-500">{res.estate}</td>
-                            <td className="py-4 px-6 font-bold text-slate-700 font-mono">{res.phone}</td>
-                            <td className="py-4 px-6 text-center font-black text-blue-600">{res.houseNo.split(',').pop()?.trim() || "12A"}</td>
+                            <td className="py-4 px-6 font-bold text-gray-500">{getResidentEstate(res)}</td>
+                            <td className="py-4 px-6 font-bold text-slate-700 font-mono">{getResidentPhone(res)}</td>
+                            <td className="py-4 px-6 text-center font-black text-blue-600">{res.houseNo?.split(',').pop()?.trim() || "12A"}</td>
                             <td className="py-4 px-6">
                               <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
                                 <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />
-                                {res.status}
+                                {res.status || "Active"}
                               </span>
                             </td>
-                            <td className="py-4 px-6 font-bold text-gray-400">{res.joinedDate}</td>
+                            <td className="py-4 px-6 font-bold text-gray-400">{getResidentJoinedDate(res)}</td>
                             <td className="py-4 px-6 text-right">
                               <ActionMenu
                                 trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
@@ -2013,7 +2220,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if(window.confirm(`Suspend access for ${res.name}?`)) {
+                                    if(window.confirm(`Suspend access for ${getResidentName(res)}?`)) {
                                       setResidents(residents.map(r => r.id === res.id ? {...r, status: r.status === 'Active' ? 'Suspended' : 'Active'} : r));
                                     }
                                   }}
@@ -2024,7 +2231,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if(window.confirm(`Deactivate and remove ${res.name} from records?`)) {
+                                    if(window.confirm(`Deactivate and remove ${getResidentName(res)} from records?`)) {
                                       setResidents(residents.filter(r => r.id !== res.id));
                                     }
                                   }}
@@ -2043,7 +2250,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
                   {/* Pagination matched to image bottom */}
                   <div className="p-4 border-t border-gray-50 flex justify-between items-center text-[10px] font-bold text-gray-400">
-                    <span>1 - 10 of 1,234 Residents</span>
+                    <span>{filteredResidents.length} of {residents.length} Residents</span>
                     <div className="flex gap-4">
                       <button className="hover:text-slate-900 disabled:opacity-30 uppercase tracking-widest">← Previous</button>
                       <button className="hover:text-slate-900 uppercase tracking-widest">Next →</button>
@@ -2234,19 +2441,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {staffList
-                        .filter(st => {
-                          // Search query
-                          if (staffSearchText && !st.name.toLowerCase().includes(staffSearchText.toLowerCase())) return false;
-                          // Status
-                          if (staffStatusFilter !== "All" && st.status !== staffStatusFilter) return false;
-                          // Shift
-                          if (staffShiftFilter !== "All Shift" && st.shift.toLowerCase() !== staffShiftFilter.toLowerCase()) return false;
-                          // Type
-                          if (staffTypeFilter !== "All" && !st.role.toLowerCase().includes(staffTypeFilter.toLowerCase())) return false;
-                          return true;
-                        })
-                        .map((st) => (
+                      {filteredStaffList.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center font-bold text-gray-400">
+                            No staff match your search.
+                          </td>
+                        </tr>
+                      ) : filteredStaffList.map((st) => (
                           <tr key={st.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
                             <td
                               className="py-3.5 px-4 font-bold text-slate-900 cursor-pointer hover:text-blue-600"
@@ -2378,6 +2579,30 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">Admin</h3>
                 </div>
 
+                <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3 items-center bg-gray-50/40">
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search admins..."
+                      value={adminSearchText}
+                      onChange={(e) => setAdminSearchText(e.target.value)}
+                      className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  {adminSearchText && (
+                    <button
+                      onClick={() => setAdminSearchText("")}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-bold"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <span className="text-[10px] font-bold text-gray-400 sm:ml-auto">
+                    {filteredAdminsList.length} of {adminsList.length} admins
+                  </span>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs bg-white text-slate-705">
                     <thead>
@@ -2391,8 +2616,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {adminsList.map((adm, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 hover:bg-slate-50">
+                      {isAdminsLoading ? (
+                        <tr><td colSpan={6} className="py-12"><TableSkeleton rows={5} cols={6} /></td></tr>
+                      ) : filteredAdminsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center font-bold text-gray-400">
+                            No admins match your search.
+                          </td>
+                        </tr>
+                      ) : filteredAdminsList.map((adm) => (
+                        <tr key={adm.id} className="border-b border-gray-100 hover:bg-slate-50">
                           <td className="py-4 px-4 font-extrabold text-slate-900">{adm.name}</td>
                           <td className="py-4 px-4 font-medium text-gray-500 font-mono">{adm.email}</td>
                           <td className="py-4 px-4">

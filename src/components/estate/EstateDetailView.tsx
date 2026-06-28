@@ -32,11 +32,26 @@ const visitorTrendData = [
   { name: "Jan 28", visitors: 1200 },
 ];
 
+const toSearchText = (value: unknown) => String(value ?? "").toLowerCase();
+
+const matchesSearchTerm = (fields: unknown[], query: string) => {
+  const term = query.trim().toLowerCase();
+  if (!term) return true;
+  return fields.some((field) => toSearchText(field).includes(term));
+};
+
+const getResidentName = (resident: Resident) =>
+  `${resident.firstName || ""} ${resident.lastName || ""}`.trim();
+
 export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetailViewProps) {
   const auth = useAuth();
   const { showToast } = useToast();
   const adminName = auth.user?.name || "Administrator";
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
+  const [residentSearchText, setResidentSearchText] = useState("");
+  const [securitySearchText, setSecuritySearchText] = useState("");
+  const [visitorSearchText, setVisitorSearchText] = useState("");
+  const [estateAdminSearchText, setEstateAdminSearchText] = useState("");
   // Admin menu managed by ActionMenu component
 
   const [isOnboardAdminModalOpen, setIsOnboardAdminModalOpen] = useState(false);
@@ -100,6 +115,22 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   }, [estateAdminsRaw, estate?.id]);
   const rolesList: Role[] = useMemo(() => parseList(rolesRaw, "roles", "result"), [rolesRaw]);
 
+  const filteredResidentsList = useMemo(() => (
+    residentsList.filter((resident) =>
+      matchesSearchTerm(
+        [
+          getResidentName(resident),
+          resident.email,
+          resident.phoneNumber,
+          resident.houseNo,
+          resident.status,
+          resident.createdAt,
+        ],
+        residentSearchText,
+      )
+    )
+  ), [residentsList, residentSearchText]);
+
   const securityStaff = [
     { id: 1, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
     { id: 2, name: "Chikwemedu Emmanuel", shift: "Night", gate: "Gate A", status: "Active" },
@@ -107,11 +138,38 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     { id: 4, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
   ];
 
+  const filteredSecurityStaff = useMemo(() => (
+    securityStaff.filter((staff) =>
+      matchesSearchTerm([staff.name, staff.shift, staff.gate, staff.status], securitySearchText)
+    )
+  ), [securitySearchText]);
+
   const visitorLogs = [
     { id: 1, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00PM, Today", status: "In", officer: `Officer ${adminName}` },
     { id: 2, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, Tomorrow", status: "Expected", officer: `Officer ${adminName}` },
     { id: 3, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00AM, May 14, 2026", status: "Out", officer: `Officer ${adminName}` },
   ];
+
+  const filteredVisitorLogs = useMemo(() => (
+    visitorLogs.filter((log) =>
+      matchesSearchTerm([log.name, log.host, log.entry, log.status, log.officer], visitorSearchText)
+    )
+  ), [visitorSearchText]);
+
+  const filteredEstateAdminsList = useMemo(() => (
+    estateAdminsList.filter((admin) =>
+      matchesSearchTerm(
+        [
+          `${admin.firstName || ""} ${admin.lastName || ""}`.trim(),
+          admin.email,
+          admin.role?.name,
+          admin.status,
+          admin.createdAt,
+        ],
+        estateAdminSearchText,
+      )
+    )
+  ), [estateAdminsList, estateAdminSearchText]);
 
   const handleEstateAdminSuspend = async (adminId: string) => {
     if (!window.confirm("Suspend this estate admin?")) return;
@@ -346,6 +404,8 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                 <input 
                   type="text" 
                   placeholder="Search Residents..." 
+                  value={residentSearchText}
+                  onChange={(e) => setResidentSearchText(e.target.value)}
                   className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -359,6 +419,8 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
               <div className="p-12 text-center text-xs text-gray-400">Loading residents...</div>
             ) : residentsList.length === 0 ? (
               <div className="p-12 text-center text-xs text-gray-400">No residents found for this estate.</div>
+            ) : filteredResidentsList.length === 0 ? (
+              <div className="p-12 text-center text-xs text-gray-400">No residents match your search.</div>
             ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -373,7 +435,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {residentsList.map((res) => (
+                  {filteredResidentsList.map((res) => (
                     <tr key={res.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6 font-bold text-slate-900">{res.firstName} {res.lastName}</td>
                       <td className="py-4 px-6 font-bold text-gray-500">{res.email}</td>
@@ -406,6 +468,8 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                 <input 
                   type="text" 
                   placeholder="Search Security Staff..." 
+                  value={securitySearchText}
+                  onChange={(e) => setSecuritySearchText(e.target.value)}
                   className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -429,7 +493,13 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {securityStaff.map((staff) => (
+                  {filteredSecurityStaff.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center font-bold text-gray-400">
+                        No security staff match your search.
+                      </td>
+                    </tr>
+                  ) : filteredSecurityStaff.map((staff) => (
                     <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6 font-bold text-slate-900">{staff.name}</td>
                       <td className="py-4 px-6 font-bold text-blue-600">{staff.shift}</td>
@@ -462,6 +532,8 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                 <input 
                   type="text" 
                   placeholder="Search Visitor Logs..." 
+                  value={visitorSearchText}
+                  onChange={(e) => setVisitorSearchText(e.target.value)}
                   className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -486,7 +558,13 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {visitorLogs.map((log) => (
+                  {filteredVisitorLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center font-bold text-gray-400">
+                        No visitor logs match your search.
+                      </td>
+                    </tr>
+                  ) : filteredVisitorLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6 font-bold text-slate-900">{log.name}</td>
                       <td className="py-4 px-6 font-bold text-gray-500">{log.host}</td>
@@ -532,6 +610,19 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
               ) : estateAdminsList.length === 0 ? (
                 <div className="p-12 text-center text-xs text-gray-400">No admins found for this estate.</div>
               ) : (
+              <>
+              <div className="p-4 border-b border-gray-50 bg-slate-50/30">
+                <div className="relative w-full sm:w-72">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Estate Admins..."
+                    value={estateAdminSearchText}
+                    onChange={(e) => setEstateAdminSearchText(e.target.value)}
+                    className="w-full text-xs pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
@@ -544,7 +635,13 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {estateAdminsList.map((adm) => (
+                    {filteredEstateAdminsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center font-bold text-gray-400">
+                          No estate admins match your search.
+                        </td>
+                      </tr>
+                    ) : filteredEstateAdminsList.map((adm) => (
                       <tr key={adm.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="py-4 px-6 font-bold text-slate-900">{adm.firstName} {adm.lastName}</td>
                         <td className="py-4 px-6 font-bold text-gray-500 font-mono">{adm.email}</td>
@@ -603,6 +700,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                   </tbody>
                 </table>
               </div>
+              </>
               )}
             </div>
           </div>
