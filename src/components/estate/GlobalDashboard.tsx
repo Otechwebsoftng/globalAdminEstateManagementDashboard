@@ -16,6 +16,14 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
 import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi } from "../../services/api";
 import { queryClient } from "../../lib/queryClient";
+import { qk } from "../../lib/queryKeys";
+import { parseList } from "../../lib/parseList";
+import { fetchAllAdmins as fetchAllAdminsShared } from "../../lib/adminList";
+import { toSearchText, matchesSearchTerms } from "../../lib/search";
+import {
+  getResidentName, getResidentPhone, getResidentEstate,
+  getResidentJoinedDate, getResidentInitials,
+} from "../../lib/format";
 import type { Estate, Resident, Admin, Role, MenuItem, Permission } from "../../types/api";
 
 interface EstateRow extends Estate {
@@ -56,37 +64,7 @@ const revenueData = [
   { name: "Dec", revenue: 16000000 }
 ];
 
-const toSearchText = (value: unknown) => String(value ?? "").toLowerCase();
 
-const matchesSearchTerms = (fields: unknown[], ...queries: string[]) => {
-  const terms = queries.map((query) => query.trim().toLowerCase()).filter(Boolean);
-  if (terms.length === 0) return true;
-  return terms.every((term) => fields.some((field) => toSearchText(field).includes(term)));
-};
-
-const formatDisplayDate = (value: unknown) => {
-  if (!value) return "";
-  const date = new Date(String(value));
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
-};
-
-const getResidentName = (resident: any) =>
-  resident?.name || `${resident?.firstName || ""} ${resident?.lastName || ""}`.trim();
-
-const getResidentPhone = (resident: any) => resident?.phone || resident?.phoneNumber || "";
-
-const getResidentEstate = (resident: any) => resident?.estate || resident?.estateName || "";
-
-const getResidentJoinedDate = (resident: any) =>
-  resident?.joinedDate || formatDisplayDate(resident?.createdAt);
-
-const getResidentInitials = (resident: any) => {
-  const name = getResidentName(resident);
-  return name
-    ? name.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 3).toUpperCase()
-    : "R";
-};
 
 export default function GlobalDashboard({}: GlobalDashboardProps) {
   const navigate = useNavigate();
@@ -204,82 +182,41 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   };
 
   // ── React Query ──────────────────────────────────────────
-  const qk = {
-    dashboard: ["dashboard"] as const,
-    estates: ["estates"] as const,
-    admins: ["admins"] as const,
-    roles: ["roles"] as const,
-    menu: ["menu"] as const,
-    permissions: ["permissions"] as const,
-  };
 
-  const parseList = (res: any, ...keys: string[]): any[] => {
-    if (!res) return [];
-    for (const key of keys) {
-      if (Array.isArray(res?.[key])) return res[key];
-    }
-    if (Array.isArray(res?.data)) return res.data;
-    if (res?.data && typeof res.data === "object" && !Array.isArray(res.data)) {
-      for (const key of keys) {
-        if (Array.isArray(res.data?.[key])) return res.data[key];
-      }
-      for (const innerKey of Object.keys(res.data)) {
-        if (Array.isArray(res.data[innerKey])) return res.data[innerKey];
-      }
-    }
-    if (Array.isArray(res)) return res;
-    return [];
-  };
 
-  const fetchAllAdmins = async () => {
-    // Primary: single call WITHOUT status filter returns ALL admins
-    const res = await globalAdminApi.list();
-    const items = parseList(res, "admins", "users", "result");
-    if (items.length > 0) return items;
 
-    // Fallback: if unfiltered call returned empty, try each status individually
-    const statuses = ["active", "inactive", "suspended", "flagged"];
-    const results = await Promise.allSettled(
-      statuses.map((s) => globalAdminApi.list({ status: s }))
-    );
-    const seen = new Map<string, any>();
-    for (const r of results) {
-      if (r.status === "fulfilled") {
-        for (const item of parseList(r.value, "admins", "users", "result")) {
-          if (item?.id && !seen.has(item.id)) seen.set(item.id, item);
-        }
-      }
-    }
-    return Array.from(seen.values());
-  };
+
+  const fetchAllAdmins = () => fetchAllAdminsShared(globalAdminApi, ["admins", "users", "result"]);
+
+
 
   const { data: dashboardRaw, isLoading: isDashboardLoading } = useQuery({
-    queryKey: qk.dashboard,
+    queryKey: qk.dashboard(),
     queryFn: () => globalAdminApi.getDashboard(),
   });
 
   const { data: estatesRaw, isLoading: isEstatesLoading, refetch: refetchEstates } = useQuery({
-    queryKey: qk.estates,
+    queryKey: qk.estates(),
     queryFn: () => estateApi.list(),
   });
 
   const { data: adminsRaw, isLoading: isAdminsLoading, refetch: refetchAdmins } = useQuery({
-    queryKey: qk.admins,
+    queryKey: qk.admins(),
     queryFn: fetchAllAdmins,
   });
 
   const { data: rolesRaw } = useQuery({
-    queryKey: qk.roles,
+    queryKey: qk.roles(),
     queryFn: () => roleApi.list(),
   });
 
   const { data: menuRaw } = useQuery({
-    queryKey: qk.menu,
+    queryKey: qk.menu(),
     queryFn: () => menuApi.list(),
   });
 
   const { data: permissionsRaw } = useQuery({
-    queryKey: qk.permissions,
+    queryKey: qk.permissions(),
     queryFn: () => permissionApi.list(),
   });
 
@@ -447,7 +384,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         state: newEstate.state.trim(),
         country: newEstate.country.trim(),
       });
-      queryClient.invalidateQueries({ queryKey: qk.estates });
+      queryClient.invalidateQueries({ queryKey: qk.estates() });
       await refetchEstates();
       showToast("Estate onboarded successfully");
       setIsOnboardModalOpen(false);
@@ -475,7 +412,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         state: editingEstate.state || "Lagos",
         country: editingEstate.country || "Nigeria",
       });
-      queryClient.invalidateQueries({ queryKey: qk.estates });
+      queryClient.invalidateQueries({ queryKey: qk.estates() });
       showToast("Estate updated successfully");
     } catch (err: any) {
       showToast(err.message || "Failed to update estate");
@@ -496,7 +433,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
         phoneNumber: newAdmin.phoneNumber || "0000000000",
         roleId: newAdmin.roleId,
       });
-      queryClient.invalidateQueries({ queryKey: qk.admins });
+      queryClient.invalidateQueries({ queryKey: qk.admins() });
       await refetchAdmins();
       showToast("Admin onboarded successfully");
     } catch (err: any) {
@@ -514,7 +451,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!window.confirm("Are you sure you want to suspend this admin?")) return;
     try {
       await globalAdminApi.suspend(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.admins });
+      queryClient.invalidateQueries({ queryKey: qk.admins() });
       showToast("Admin suspended");
     } catch (err: any) {
       showToast(err.message || "Failed to suspend admin");
@@ -524,7 +461,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const handleAdminRestore = async (adminId: string) => {
     try {
       await globalAdminApi.restore(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.admins });
+      queryClient.invalidateQueries({ queryKey: qk.admins() });
       showToast("Admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore admin");
@@ -535,7 +472,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!window.confirm("Are you sure you want to delete this admin? This action cannot be undone.")) return;
     try {
       await globalAdminApi.softDelete(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.admins });
+      queryClient.invalidateQueries({ queryKey: qk.admins() });
       showToast("Admin deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete admin");
@@ -547,7 +484,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!newRole.name) return;
     try {
       await roleApi.create({ name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
-      queryClient.invalidateQueries({ queryKey: qk.roles });
+      queryClient.invalidateQueries({ queryKey: qk.roles() });
       showToast("Role created successfully");
       setIsRoleModalOpen(false);
       setNewRole({ name: "", description: "", permissionIds: [] });
@@ -561,7 +498,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!editingRole) return;
     try {
       await roleApi.update(editingRole.id, { name: newRole.name, description: newRole.description, permissionIds: newRole.permissionIds });
-      queryClient.invalidateQueries({ queryKey: qk.roles });
+      queryClient.invalidateQueries({ queryKey: qk.roles() });
       showToast("Role updated successfully");
       setIsRoleModalOpen(false);
       setEditingRole(null);
@@ -575,7 +512,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (!window.confirm("Delete this role? This cannot be undone.")) return;
     try {
       await roleApi.delete(roleId);
-      queryClient.invalidateQueries({ queryKey: qk.roles });
+      queryClient.invalidateQueries({ queryKey: qk.roles() });
       showToast("Role deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete role");
@@ -585,7 +522,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const handleAdminUpdateRole = async (adminId: string, roleId: string) => {
     try {
       await globalAdminApi.updateRole(adminId, { roleId });
-      queryClient.invalidateQueries({ queryKey: qk.admins });
+      queryClient.invalidateQueries({ queryKey: qk.admins() });
       showToast("Admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update admin role");

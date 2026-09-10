@@ -13,6 +13,11 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
 import { estateApi, estateAdminApi, roleApi } from "../../services/api";
 import { queryClient } from "../../lib/queryClient";
+import { qk } from "../../lib/queryKeys";
+import { parseList } from "../../lib/parseList";
+import { fetchAdminsByStatus } from "../../lib/adminList";
+import { matchesSearchTerms } from "../../lib/search";
+import { getResidentName } from "../../lib/format";
 import ActionMenu from "../ActionMenu";
 import type { Resident, Admin, Role } from "../../types/api";
 
@@ -32,17 +37,6 @@ const visitorTrendData = [
   { name: "Jan 28", visitors: 1200 },
 ];
 
-const toSearchText = (value: unknown) => String(value ?? "").toLowerCase();
-
-const matchesSearchTerm = (fields: unknown[], query: string) => {
-  const term = query.trim().toLowerCase();
-  if (!term) return true;
-  return fields.some((field) => toSearchText(field).includes(term));
-};
-
-const getResidentName = (resident: Resident) =>
-  `${resident.firstName || ""} ${resident.lastName || ""}`.trim();
-
 export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetailViewProps) {
   const auth = useAuth();
   const { showToast } = useToast();
@@ -57,52 +51,30 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const [isOnboardAdminModalOpen, setIsOnboardAdminModalOpen] = useState(false);
   const [newEstateAdmin, setNewEstateAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
 
-  const parseList = (res: any, ...keys: string[]): any[] => {
-    for (const key of keys) {
-      if (Array.isArray(res?.[key])) return res[key];
-    }
-    if (Array.isArray(res?.data)) return res.data;
-    if (Array.isArray(res)) return res;
-    return [];
-  };
 
-  const qk = {
-    estateResidents: ["estateResidents", estate?.id] as const,
-    estateAdmins: ["estateAdmins", estate?.id] as const,
-    roles: ["roles"] as const,
-  };
+
+
 
   const { data: residentsRaw, isLoading: isResidentsLoading } = useQuery({
-    queryKey: qk.estateResidents,
+    queryKey: qk.estateResidents(estate?.id),
     queryFn: () => estateApi.getResidents(estate.id),
     enabled: !!estate?.id,
   });
 
   const fetchAllEstateAdmins = async () => {
     if (!estate?.id) return [];
-    const statuses = ["active", "inactive", "suspended", "flagged"];
-    const results = await Promise.allSettled(
-      statuses.map((s) => estateAdminApi.list({ status: s }))
-    );
-    const seen = new Map<string, any>();
-    for (const r of results) {
-      if (r.status === "fulfilled") {
-        for (const item of parseList(r.value, "admins", "result")) {
-          if (item?.id && !seen.has(item.id)) seen.set(item.id, item);
-        }
-      }
-    }
-    return Array.from(seen.values());
+    return fetchAdminsByStatus(estateAdminApi, ["admins", "result"]);
   };
 
+
   const { data: estateAdminsRaw, isLoading: isEstateAdminsLoading } = useQuery({
-    queryKey: qk.estateAdmins,
+    queryKey: qk.estateAdmins(estate?.id),
     queryFn: fetchAllEstateAdmins,
     enabled: !!estate?.id,
   });
 
   const { data: rolesRaw } = useQuery({
-    queryKey: qk.roles,
+    queryKey: qk.roles(),
     queryFn: () => roleApi.list(),
   });
 
@@ -117,7 +89,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const filteredResidentsList = useMemo(() => (
     residentsList.filter((resident) =>
-      matchesSearchTerm(
+      matchesSearchTerms(
         [
           getResidentName(resident),
           resident.email,
@@ -140,7 +112,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const filteredSecurityStaff = useMemo(() => (
     securityStaff.filter((staff) =>
-      matchesSearchTerm([staff.name, staff.shift, staff.gate, staff.status], securitySearchText)
+      matchesSearchTerms([staff.name, staff.shift, staff.gate, staff.status], securitySearchText)
     )
   ), [securitySearchText]);
 
@@ -152,13 +124,13 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const filteredVisitorLogs = useMemo(() => (
     visitorLogs.filter((log) =>
-      matchesSearchTerm([log.name, log.host, log.entry, log.status, log.officer], visitorSearchText)
+      matchesSearchTerms([log.name, log.host, log.entry, log.status, log.officer], visitorSearchText)
     )
   ), [visitorSearchText]);
 
   const filteredEstateAdminsList = useMemo(() => (
     estateAdminsList.filter((admin) =>
-      matchesSearchTerm(
+      matchesSearchTerms(
         [
           `${admin.firstName || ""} ${admin.lastName || ""}`.trim(),
           admin.email,
@@ -175,7 +147,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (!window.confirm("Suspend this estate admin?")) return;
     try {
       await estateAdminApi.suspend(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
       showToast("Estate admin suspended");
     } catch (err: any) {
       showToast(err.message || "Failed to suspend estate admin");
@@ -185,7 +157,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const handleEstateAdminRestore = async (adminId: string) => {
     try {
       await estateAdminApi.restore(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
       showToast("Estate admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore estate admin");
@@ -196,7 +168,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (!window.confirm("Delete this estate admin? This cannot be undone.")) return;
     try {
       await estateAdminApi.softDelete(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
       showToast("Estate admin deleted");
     } catch (err: any) {
       showToast(err.message || "Failed to delete estate admin");
@@ -213,7 +185,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         email: newEstateAdmin.email,
         roleId: newEstateAdmin.roleId,
       });
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
       showToast("Estate admin onboarded successfully");
       setIsOnboardAdminModalOpen(false);
       setNewEstateAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
@@ -225,7 +197,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const handleEstateAdminUpdateRole = async (adminId: string, roleId: string) => {
     try {
       await estateAdminApi.updateRole(adminId, { roleId });
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
       showToast("Estate admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update estate admin role");
