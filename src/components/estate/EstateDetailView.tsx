@@ -61,6 +61,30 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     enabled: !!estate?.id,
   });
 
+  // GET /estate/{estateId} returns real resident/staff/admin counts.
+  const { data: estateDetailRaw } = useQuery({
+    queryKey: qk.estate(estate?.id ?? ""),
+    queryFn: () => estateApi.getById(estate.id),
+    enabled: !!estate?.id,
+  });
+
+  const counts = useMemo(() => {
+    const d: any = (estateDetailRaw as any)?.data ?? estateDetailRaw ?? {};
+    const pick = (...keys: string[]) => {
+      for (const k of keys) {
+        const v = d?.[k] ?? d?.counts?.[k] ?? d?._count?.[k];
+        if (typeof v === "number") return v;
+      }
+      return null;
+    };
+    return {
+      residents: pick("residentCount", "totalResidents", "residents"),
+      units: pick("unitCount", "totalUnits", "units", "houseCount"),
+      security: pick("securityCount", "totalSecurity", "staffCount", "totalStaff"),
+      admins: pick("adminCount", "totalAdmins", "admins"),
+    };
+  }, [estateDetailRaw]);
+
   const fetchAllEstateAdmins = async () => {
     if (!estate?.id) return [];
     return fetchAdminsByStatus(estateAdminApi, ["admins", "result"]);
@@ -734,7 +758,9 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
               <TrendingUp className="h-2.5 w-2.5" /> +12%
             </span>
           </div>
-          <span className="text-2xl font-black text-slate-900 block leading-none">12,532</span>
+          <span className="text-2xl font-black text-slate-900 block leading-none">
+            {counts.residents?.toLocaleString() ?? residentsList.length.toLocaleString()}
+          </span>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">Active Residents</span>
         </div>
 
@@ -747,7 +773,9 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
               <TrendingUp className="h-2.5 w-2.5" /> +2%
             </span>
           </div>
-          <span className="text-2xl font-black text-slate-900 block leading-none">12</span>
+          <span className="text-2xl font-black text-slate-900 block leading-none">
+            {counts.units?.toLocaleString() ?? "--"}
+          </span>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">Housing Units</span>
         </div>
 
@@ -760,7 +788,9 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
               <TrendingUp className="h-2.5 w-2.5" /> +8%
             </span>
           </div>
-          <span className="text-2xl font-black text-slate-900 block leading-none">1,234</span>
+          <span className="text-2xl font-black text-slate-900 block leading-none">
+            {counts.security?.toLocaleString() ?? "--"}
+          </span>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">Security Guards</span>
         </div>
 
@@ -773,7 +803,9 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                Online
             </span>
           </div>
-          <span className="text-2xl font-black text-slate-900 block leading-none">3</span>
+          <span className="text-2xl font-black text-slate-900 block leading-none">
+            {(counts.admins ?? estateAdminsList.length).toLocaleString()}
+          </span>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">Active Admins</span>
         </div>
       </div>

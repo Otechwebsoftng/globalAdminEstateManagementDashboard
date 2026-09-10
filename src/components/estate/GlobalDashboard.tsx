@@ -10,6 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import EstateDetailView from "./EstateDetailView";
 import ResidentDetailView from "./ResidentDetailView";
 import ActionMenu from "../ActionMenu";
+import OnboardEstateWizard from "../../features/estates/OnboardEstateWizard";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -24,7 +25,16 @@ import {
   getResidentName, getResidentPhone, getResidentEstate,
   getResidentJoinedDate, getResidentInitials,
 } from "../../lib/format";
-import type { Estate, Resident, Admin, Role, MenuItem, Permission } from "../../types/api";
+import type { Estate, Resident, Admin, Role, MenuItem, Permission, CreateEstateDto } from "../../types/api";
+
+const getEstateInitials = (name?: string) =>
+  (name || "")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "ES";
 
 interface EstateRow extends Estate {
   name: string;
@@ -73,20 +83,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const { showToast } = useToast();
 
   const adminName = auth.user?.name || "Administrator";
-  const emptyEstateForm = {
-    name: "",
-    firstName: "",
-    lastName: "",
-    cac: "",
-    countryCode: "+234",
-    phone: "",
-    email: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "Nigeria",
-    tier: "ENTERPRISE"
-  };
+
 
   const onLogout = () => {
     auth.logout();
@@ -123,8 +120,6 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // State to manage Onboard Estate Modal input - matches frame 1618686559/1618686560
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
-  const [newEstate, setNewEstate] = useState(emptyEstateForm);
-  const [sendLoginDetails, setSendLoginDetails] = useState(true);
 
   // Residents State
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -195,7 +190,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     queryFn: () => globalAdminApi.getDashboard(),
   });
 
-  const { data: estatesRaw, isLoading: isEstatesLoading, refetch: refetchEstates } = useQuery({
+  const { data: estatesRaw, isLoading: isEstatesLoading } = useQuery({
     queryKey: qk.estates(),
     queryFn: () => estateApi.list(),
   });
@@ -351,53 +346,23 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const permissionsList: Permission[] = useMemo(() => parseList(permissionsRaw, "permissions", "result"), [permissionsRaw]);
 
   // ── Mutations with cache invalidation ────────────────────
-  const handleOnboardEstateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const requiredFields = [
-      newEstate.name,
-      newEstate.firstName,
-      newEstate.lastName,
-      newEstate.cac,
-      newEstate.countryCode,
-      newEstate.phone,
-      newEstate.email,
-      newEstate.address,
-      newEstate.city,
-      newEstate.state,
-      newEstate.country,
-    ];
-    if (requiredFields.some((value) => !value.trim())) {
-      showToast("Please fill every required estate and contact admin field.");
-      return;
-    }
+  const handleOnboardEstateSubmit = async (dto: CreateEstateDto) => {
+    // Per-step validation lives in the wizard; this only handles the request.
+    // Throwing lets the wizard keep the modal open and stay on the last step.
     try {
-      await estateApi.onboard({
-        estateName: newEstate.name.trim(),
-        firstName: newEstate.firstName.trim(),
-        lastName: newEstate.lastName.trim(),
-        cac: newEstate.cac.trim(),
-        countryCode: newEstate.countryCode.trim(),
-        phoneNumber: newEstate.phone.trim(),
-        email: newEstate.email.trim(),
-        address: newEstate.address.trim(),
-        city: newEstate.city.trim(),
-        state: newEstate.state.trim(),
-        country: newEstate.country.trim(),
-      });
+      await estateApi.onboard(dto);
       queryClient.invalidateQueries({ queryKey: qk.estates() });
-      await refetchEstates();
-      showToast("Estate onboarded successfully");
-      setIsOnboardModalOpen(false);
-      setNewEstate(emptyEstateForm);
-      setSendLoginDetails(true);
+      showToast("Estate onboarded successfully", "success");
     } catch (err: any) {
       if (err.status === 409) {
         showToast("An estate contact admin with this email already exists.");
       } else {
         showToast(err.message || "Failed to onboard estate");
       }
+      throw err;
     }
   };
+
 
   const handleEditEstateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1255,7 +1220,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       Estates
                     </h2>
                     <p className="text-xs text-gray-400 font-bold uppercase tracking-tight">
-                      Manage and monitor 1,234 registered communities and their operational status.
+                      {`Manage and monitor ${estates.length.toLocaleString()} registered ${estates.length === 1 ? "community" : "communities"} and their operational status.`}
                     </p>
                   </div>
 
@@ -1325,14 +1290,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                 className="flex items-center gap-3 cursor-pointer group/name w-fit"
                               >
                                 <div className="h-8 w-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-black text-[10px] border border-blue-100 group-hover/name:bg-blue-600 group-hover/name:text-white transition-all">
-                                  SV
+                                  {getEstateInitials(est.name)}
                                 </div>
                                 <span className="font-black text-slate-900 group-hover/name:text-blue-600 transition-colors">{est.name}</span>
                               </div>
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-500">{est.city}, NG</td>
-                            <td className="py-4 px-6 text-center font-bold text-slate-700">1,003</td>
-                            <td className="py-4 px-6 text-center font-bold text-slate-700">40</td>
+                            {/* No per-row counts on GET /estate. Render a dash
+                                rather than a convincing fake number. */}
+                            <td className="py-4 px-6 text-center font-bold text-gray-300">--</td>
+                            <td className="py-4 px-6 text-center font-bold text-gray-300">--</td>
                             <td className="py-4 px-6">
                               <span className="text-[9px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-tighter">
                                 {est.tier}
@@ -2160,204 +2127,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
       {/* MODAL MODULAR SUBSETS AND SLIDE-OVERS */}
 
-      {/* 1. ONBOARD NEW ESTATE POPUP MODAL - HIGH FIDELITY DESIGN */}
-      {isOnboardModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300 px-4 py-6 overflow-y-auto">
-          <div className="bg-white rounded-[32px] w-full max-w-3xl max-h-[calc(100vh-3rem)] overflow-y-auto p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
-            <button
-              className="absolute top-6 right-6 text-gray-400 hover:text-slate-900 transition-colors"
-              onClick={() => setIsOnboardModalOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <div className="mb-8">
-              <h3 className="text-2xl font-black text-slate-900 font-display leading-none">
-                Onboard New Estates
-              </h3>
-              <p className="text-xs text-gray-400 font-bold mt-2">
-                The admin will manage the estate
-              </p>
-            </div>
-
-            <form onSubmit={handleOnboardEstateSubmit} className="space-y-7">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Admin First Name
-                  </label>
-                  <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="John" value={newEstate.firstName}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                      onChange={(e) => setNewEstate({...newEstate, firstName: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Admin Last Name
-                  </label>
-                  <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="Miller" value={newEstate.lastName}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                      onChange={(e) => setNewEstate({...newEstate, lastName: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Estate Name
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="Sunset Valley Properties" value={newEstate.name}
-                      onChange={(e) => setNewEstate({...newEstate, name: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    CAC Number
-                  </label>
-                  <div className="relative">
-                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="RC1234567" value={newEstate.cac}
-                      onChange={(e) => setNewEstate({...newEstate, cac: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="email" required placeholder="youremail@gmail.com" value={newEstate.email}
-                      onChange={(e) => setNewEstate({...newEstate, email: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Phone Number
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text" required aria-label="Country code" value={newEstate.countryCode}
-                      onChange={(e) => setNewEstate({...newEstate, countryCode: e.target.value})}
-                      className="w-20 text-xs px-3 py-3.5 bg-slate-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-black text-gray-500"
-                    />
-                    <div className="relative flex-1">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                      <input
-                        type="text" required placeholder="803 - 533 - 5432" value={newEstate.phone}
-                        onChange={(e) => setNewEstate({...newEstate, phone: e.target.value})}
-                        className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    State
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="Lagos" value={newEstate.state}
-                      onChange={(e) => setNewEstate({...newEstate, state: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="relative sm:col-span-1">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Address
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-4 h-3.5 w-3.5 text-gray-400" />
-                    <textarea
-                      rows={2} required placeholder="e.g Suite 402, Marble Towers, Kingsway Road" value={newEstate.address}
-                      onChange={(e) => setNewEstate({...newEstate, address: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200 resize-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    City
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="Surulere" value={newEstate.city}
-                      onChange={(e) => setNewEstate({...newEstate, city: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
-                    Country
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                    <input
-                      type="text" required placeholder="Nigeria" value={newEstate.country}
-                      onChange={(e) => setNewEstate({...newEstate, country: e.target.value})}
-                      className="w-full text-xs pl-10 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold placeholder:text-gray-200"
-                    />
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSendLoginDetails(!sendLoginDetails)}>
-                <div className={`h-5 w-5 rounded flex items-center justify-center transition-colors ${sendLoginDetails ? "bg-blue-600" : "bg-gray-200 border border-gray-300"}`}>
-                  {sendLoginDetails && <Check className="h-3.5 w-3.5 text-white stroke-[4]" />}
-                </div>
-                <span className="text-[11px] font-bold text-slate-500">Send login details to admin email</span>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="button" onClick={() => setIsOnboardModalOpen(false)}
-                  className="flex-1 py-4 bg-slate-50 text-slate-600 text-xs font-black rounded-2xl hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel Onboarding
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-4 bg-blue-600 text-white text-xs font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  Onboarding Estate
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 1. ONBOARD NEW ESTATE — 2-step wizard (Board 3) */}
+      <OnboardEstateWizard
+        open={isOnboardModalOpen}
+        onClose={() => setIsOnboardModalOpen(false)}
+        onSubmit={handleOnboardEstateSubmit}
+      />
 
       {/* 2. EDIT ESTATE POPUP MODAL - MATCHES DESIGN STANDARD */}
       {isEditModalOpen && editingEstate && (
