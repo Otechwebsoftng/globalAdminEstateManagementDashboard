@@ -11,6 +11,7 @@ import EstateDetailView from "./EstateDetailView";
 import ResidentDetailView from "./ResidentDetailView";
 import ActionMenu from "../ActionMenu";
 import OnboardEstateWizard from "../../features/estates/OnboardEstateWizard";
+import SettingsPage from "../../features/settings/SettingsPage";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -2088,8 +2089,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             </div>
           )}
 
-          {/* TAB 7: BILLING, LOGS, SettingsPlaceholder */}
-          {["billing", "tickets", "logs", "settings"].includes(activeMenu) && (
+          {/* TAB 7: SETTINGS — Board 5 */}
+          {activeMenu === "settings" && <SettingsPage />}
+
+          {/* TAB 8: BILLING, TICKETS, LOGS placeholder */}
+          {["billing", "tickets", "logs"].includes(activeMenu) && (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center animate-fade-in space-y-4 shadow-sm">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-slate-400 border border-gray-150 mx-auto">
                 <HelpCircle className="h-6 w-6" />
