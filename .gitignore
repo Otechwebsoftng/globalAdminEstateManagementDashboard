@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# vim swap files
+*.sw[a-p]
