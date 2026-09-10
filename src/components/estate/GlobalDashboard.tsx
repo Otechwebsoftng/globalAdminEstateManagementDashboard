@@ -2951,16 +2951,23 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                const added = {
+                // Local-state only: there is no resident create endpoint yet.
+                // Board 1 replaces this with the Add Resident wizard.
+                const [firstName = "", ...restName] = newResident.name.trim().split(" ");
+                const added: Resident = {
                   id: `res-${Date.now()}`,
-                  ...newResident,
-                  joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                  vehicles: [],
-                  familyCount: 1
+                  firstName,
+                  lastName: restName.join(" "),
+                  email: newResident.email,
+                  phoneNumber: newResident.phone,
+                  houseNo: newResident.houseNo,
+                  estateId: "",
+                  status: "Active",
+                  createdAt: new Date().toISOString(),
                 };
                 setResidents([added, ...residents]);
                 setIsAddResidentModalOpen(false);
-                setNewResident({ name: "", email: "", phone: "", estate: "Sunset Valley Residences", houseNo: "", status: "Active" });
+                setNewResident({ name: "", email: "", phone: "", houseNo: "" });
               }}
               className="space-y-7"
             >

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ShieldCheck, Mail, Lock, ArrowRight, Check, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import type { User } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../services/api";
 
@@ -116,17 +117,26 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
       const accessToken = response?.data?.accessToken || response?.accessToken || response?.token;
       const user = response?.data?.user || response?.user;
       if (accessToken && user) {
-        const userData = {
+        const userData: User = {
           id: user.id,
           name: `${user.firstName} ${user.lastName}`,
           role: user.role?.name || "Global Administrator",
           email: user.email,
+          // Only the global-admin login path exists today; the estate-admin
+          // toggle sets this to ESTATE_ADMIN when it lands.
+          persona: "GLOBAL_ADMIN",
+          roleId: user.role?.id,
+          permissions: user.role?.permissions?.map((perm: any) => perm.slug),
+          estateId: user.estateId ?? user.estate?.id,
         };
         auth.login(userData, accessToken);
         if (onLoginSuccess) onLoginSuccess(userData.name);
         navigate("/admin/dashboard");
       } else if (accessToken) {
-        auth.login({ id: "admin", name: "Administrator", role: "Global Admin", email }, accessToken);
+        auth.login(
+          { id: "admin", name: "Administrator", role: "Global Admin", email, persona: "GLOBAL_ADMIN" },
+          accessToken,
+        );
         navigate("/admin/dashboard");
       } else {
         setErrors("OTP verification succeeded but no token received. Check console.");

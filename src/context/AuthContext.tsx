@@ -1,11 +1,20 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { setAuthToken, getAuthToken } from "../services/api";
+import type { Persona } from "../config/personas";
 
 export interface User {
   id: string;
   name: string;
+  /** Human-readable role name for display only — never gate on this. */
   role: string;
   email: string;
+  /** Routing discriminator. Chosen at login; see the trust note below. */
+  persona: Persona;
+  roleId?: string;
+  /** Permission slugs, for future permission-level gating. */
+  permissions?: string[];
+  /** Estate admins only — scopes every /estate/* query. */
+  estateId?: string;
 }
 
 interface AuthContextType {
@@ -40,6 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
         if (parsed && parsed.id && parsed.name) {
+          // Sessions created before personas existed have no `persona` field.
+          // Default them to GLOBAL_ADMIN — the only login path that existed —
+          // rather than rejecting the record, which would sign everyone out.
+          if (!parsed.persona) parsed.persona = "GLOBAL_ADMIN";
           setUser(parsed);
         }
       }
