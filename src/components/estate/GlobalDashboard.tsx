@@ -4,7 +4,7 @@ import {
   Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2, MapPin, Menu,
   X, TrendingUp, KeyRound, Check, RefreshCw, HelpCircle, FileText, Ban,
   Power, ShieldAlert, ChevronDown, Bell, Eye, Ban as BanIcon, Edit,
-  MoreVertical, Mail, Phone, UserX, ArrowLeft
+  MoreVertical, Mail, Phone, UserX, ArrowLeft, Car
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import EstateDetailView from "./EstateDetailView";
@@ -14,6 +14,7 @@ import OnboardEstateWizard from "../../features/estates/OnboardEstateWizard";
 import SettingsPage from "../../features/settings/SettingsPage";
 import SecurityPersonnelPage from "../../features/security/SecurityPersonnelPage";
 import SecurityPersonnelDetail from "../../features/security/SecurityPersonnelDetail";
+import AssetsPage from "../../features/assets/AssetsPage";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -105,6 +106,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // Sidebar Estate Management collapsible state
   const [isEstateMenuExpanded, setIsEstateMenuExpanded] = useState(true);
+  const [isAssetsMenuExpanded, setIsAssetsMenuExpanded] = useState(true);
+
+  // /admin/assets/<fixed|mobile>; defaults to fixed.
+  const assetsTab = useMemo(() => {
+    const parts = location.pathname.split("/").filter(Boolean);
+    return parts[2] === "mobile" ? "mobile" : "fixed";
+  }, [location.pathname]);
 
   // Search and select dropdowns filters state
   const [globalSearchText, setGlobalSearchText] = useState("");
@@ -614,14 +622,44 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                   <span>Security Personnel</span>
                 </button>
 
-                <button
-                  onClick={() => navigate("/admin/assets")}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    activeMenu === "assets" ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Real Assets</span>
-                </button>
+                <div>
+                  <button
+                    onClick={() => setIsAssetsMenuExpanded(!isAssetsMenuExpanded)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeMenu === "assets" ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Real Assets</span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isAssetsMenuExpanded ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isAssetsMenuExpanded && (
+                    <div className="ml-4 mt-1 space-y-1 pl-2 border-l border-gray-100">
+                      <button
+                        onClick={() => navigate("/admin/assets/fixed")}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          assetsTab === "fixed" && activeMenu === "assets"
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Building2 className="h-3.5 w-3.5" />
+                        <span>Fixed Assets</span>
+                      </button>
+                      <button
+                        onClick={() => navigate("/admin/assets/mobile")}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          assetsTab === "mobile" && activeMenu === "assets"
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Car className="h-3.5 w-3.5" />
+                        <span>Mobile Assets</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -902,8 +940,11 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       <button onClick={() => { navigate("/admin/security"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'security' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
                         <span>Security Personnel</span>
                       </button>
-                      <button onClick={() => { navigate("/admin/assets"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'assets' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
-                        <span>Real Assets</span>
+                      <button onClick={() => { navigate("/admin/assets/fixed"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'assets' && assetsTab === 'fixed' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
+                        <span>Real Assets · Fixed</span>
+                      </button>
+                      <button onClick={() => { navigate("/admin/assets/mobile"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'assets' && assetsTab === 'mobile' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
+                        <span>Real Assets · Mobile</span>
                       </button>
                     </div>
                   )}
@@ -2130,15 +2171,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             )
           )}
 
-          {/* REAL ASSETS — Board 6, not built yet */}
-          {activeMenu === "assets" && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center space-y-3 shadow-sm">
-              <h3 className="text-base font-black text-slate-950">Real Assets</h3>
-              <p className="text-xs text-gray-500 max-w-md mx-auto">
-                The property management screens are not built yet.
-              </p>
-            </div>
-          )}
+          {/* REAL ASSETS — Board 6: Fixed and Mobile */}
+          {activeMenu === "assets" && <AssetsPage kind={assetsTab} />}
 
           {/* TAB 7: SETTINGS — Board 5 */}
           {activeMenu === "settings" && <SettingsPage />}
