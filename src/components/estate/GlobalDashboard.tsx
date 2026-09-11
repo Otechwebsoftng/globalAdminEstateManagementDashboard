@@ -12,6 +12,8 @@ import ResidentDetailView from "./ResidentDetailView";
 import ActionMenu from "../ActionMenu";
 import OnboardEstateWizard from "../../features/estates/OnboardEstateWizard";
 import SettingsPage from "../../features/settings/SettingsPage";
+import SecurityPersonnelPage from "../../features/security/SecurityPersonnelPage";
+import SecurityPersonnelDetail from "../../features/security/SecurityPersonnelDetail";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -95,7 +97,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const activeMenu = useMemo(() => {
     const parts = location.pathname.split("/").filter(Boolean);
     const menuFromPath = parts[1] || "dashboard";
-    const validMenus = ["dashboard", "estates", "residents", "staff", "admins", "plans", "billing", "tickets", "logs", "settings"];
+    const validMenus = ["dashboard", "estates", "residents", "staff", "security", "assets", "admins", "plans", "billing", "tickets", "logs", "settings"];
     return validMenus.includes(menuFromPath) ? menuFromPath as typeof validMenus[number] : "dashboard";
   }, [location.pathname]);
 
@@ -132,6 +134,9 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // Track selected resident for detail view (derived from URL)
   const [selectedResidentId, setSelectedResidentId] = useState<string | null>(null);
+
+  // Selected security personnel for the detail view.
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
 
   // Row Action Menu State
 
@@ -599,6 +604,24 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                     {staffList.length}
                   </span>
                 </button>
+
+                <button
+                  onClick={() => navigate("/admin/security")}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeMenu === "security" ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>Security Personnel</span>
+                </button>
+
+                <button
+                  onClick={() => navigate("/admin/assets")}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeMenu === "assets" ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>Real Assets</span>
+                </button>
               </div>
             )}
           </div>
@@ -875,6 +898,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                       <button onClick={() => { navigate("/admin/staff"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'staff' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
                         <span>Staff</span>
                         <span className="text-[9px] bg-slate-100 text-slate-500 font-black px-1.5 py-0.5 rounded-full">{staffList.length}</span>
+                      </button>
+                      <button onClick={() => { navigate("/admin/security"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'security' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
+                        <span>Security Personnel</span>
+                      </button>
+                      <button onClick={() => { navigate("/admin/assets"); setIsMobileNavOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold ${activeMenu === 'assets' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>
+                        <span>Real Assets</span>
                       </button>
                     </div>
                   )}
@@ -2086,6 +2115,28 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 </div>
 
               </div>
+            </div>
+          )}
+
+          {/* SECURITY PERSONNEL — Board 4 */}
+          {activeMenu === "security" && (
+            selectedPersonnelId ? (
+              <SecurityPersonnelDetail
+                personnelId={selectedPersonnelId}
+                onBack={() => setSelectedPersonnelId(null)}
+              />
+            ) : (
+              <SecurityPersonnelPage onView={(p) => setSelectedPersonnelId(p.id)} />
+            )
+          )}
+
+          {/* REAL ASSETS — Board 6, not built yet */}
+          {activeMenu === "assets" && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center space-y-3 shadow-sm">
+              <h3 className="text-base font-black text-slate-950">Real Assets</h3>
+              <p className="text-xs text-gray-500 max-w-md mx-auto">
+                The property management screens are not built yet.
+              </p>
             </div>
           )}
 
