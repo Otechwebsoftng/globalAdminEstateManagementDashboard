@@ -85,9 +85,19 @@ export function useWizard<T extends object>({ steps, initialValues, onSubmit }: 
 
   const progress = useMemo(() => (stepIndex + 1) / steps.length, [stepIndex, steps.length]);
 
+  /**
+   * Whether the current step would pass validation right now. The design greys
+   * out Continue until the step is complete, so this drives the button's
+   * disabled state without surfacing errors before the user submits.
+   */
+  const isStepValid = useMemo(() => {
+    const found = step?.validate?.(values) ?? null;
+    return !found || Object.keys(found).length === 0;
+  }, [step, values]);
+
   return {
     values, setValue, setValues,
     step, stepIndex, totalSteps: steps.length, isFirst, isLast, progress,
-    errors, next, back, goTo: setStepIndex, submit, isSubmitting, reset,
+    errors, isStepValid, next, back, goTo: setStepIndex, submit, isSubmitting, reset,
   };
 }

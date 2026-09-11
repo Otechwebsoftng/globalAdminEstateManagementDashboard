@@ -9,6 +9,8 @@ export interface WizardChromeProps {
   isFirst: boolean;
   isLast: boolean;
   isSubmitting: boolean;
+  /** When false the Continue/Submit button is greyed out, as designed. */
+  isStepValid?: boolean;
   onBack: () => void;
   onNext: () => void;
   onSubmit: () => void;
@@ -23,7 +25,7 @@ export interface WizardChromeProps {
  */
 export default function WizardChrome({
   stepIndex, totalSteps, progress, stepTitle,
-  isFirst, isLast, isSubmitting,
+  isFirst, isLast, isSubmitting, isStepValid = true,
   onBack, onNext, onSubmit,
   submitLabel = "Submit",
   children, footerSlot,
@@ -49,17 +51,15 @@ export default function WizardChrome({
 
       <div className="flex items-center justify-between gap-3 pt-2">
         <div>
-          {!isFirst && (
-            <button
-              type="button"
-              onClick={onBack}
-              disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-all"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={isFirst || isSubmitting}
+            className="flex items-center gap-1.5 px-5 py-2.5 bg-slate-50 border border-gray-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-slate-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -67,8 +67,8 @@ export default function WizardChrome({
           <button
             type="button"
             onClick={isLast ? onSubmit : onNext}
-            disabled={isSubmitting}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-6 py-2.5 rounded-xl shadow-lg shadow-blue-100 disabled:opacity-60 transition-all"
+            disabled={isSubmitting || !isStepValid}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-6 py-2.5 rounded-xl shadow-lg shadow-blue-100 disabled:bg-blue-300 disabled:shadow-none disabled:cursor-not-allowed transition-all"
           >
             {isSubmitting && (
               <span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />

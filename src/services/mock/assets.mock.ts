@@ -5,7 +5,7 @@ import type {
 } from "../../types/asset";
 import type { ListParams, Paged } from "../../types/common";
 
-const TYPES: PropertyType[] = ["DUPLEX", "DUPLEX", "APARTMENTS", "SCHOOL", "DUPLEX", "APARTMENTS", "APARTMENTS", "OFFICE", "SCHOOL", "DUPLEX", "SHORTLET", "SUPERMARKET"];
+const TYPES: PropertyType[] = ["DUPLEX", "DUPLEX", "APARTMENTS", "SCHOOL", "DUPLEX", "APARTMENTS", "APARTMENTS", "OFFICE", "SCHOOL", "DUPLEX", "SHORTLET", "HOSPITAL"];
 const AVAIL: Availability[] = ["FOR_RENT", "FOR_RENT", "FOR_SALE", "FOR_SALE", "FOR_SALE", "FOR_RENT", "FOR_SALE", "OCCUPIED", "NONE", "FOR_RENT", "FOR_RENT", "FOR_SALE"];
 const STREETS = ["Franklyn Str", "Road 2", "Jacob Str", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Marina Rd", "Awolowo Rd"];
 
@@ -37,6 +37,7 @@ const make = (kind: AssetKind, i: number): Property => ({
   createdAt: "Mar 14, 2026",
   occupantName: AVAIL[i % AVAIL.length] === "OCCUPIED" ? "Chikwendu Emmanuel" : undefined,
   occupantUnit: AVAIL[i % AVAIL.length] === "OCCUPIED" ? "A12" : undefined,
+  occupantPhone: AVAIL[i % AVAIL.length] === "OCCUPIED" ? "(+234)803- 587- 6754" : undefined,
   activities: [
     { id: "a1", date: "Mar 14, 2026", action: "Property created" },
     { id: "a2", date: "Mar 14, 2026", action: "Property Information updated" },

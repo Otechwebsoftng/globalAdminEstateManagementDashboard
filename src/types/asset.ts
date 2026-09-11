@@ -4,14 +4,16 @@ import type { EntityStatus } from "./common";
 export type AssetKind = "fixed" | "mobile";
 
 export type PropertyType =
-  | "DUPLEX" | "APARTMENTS" | "SHORTLET" | "SUPERMARKET" | "SCHOOL" | "OFFICE";
+  | "DUPLEX" | "APARTMENTS" | "SHORTLET" | "SUPERMARKET" | "SCHOOL" | "HOSPITAL" | "OFFICE";
+// Order matches the Add Property dropdown in the design. Office is kept because
+// the property table shows existing rows of that type.
 export const PROPERTY_TYPES: PropertyType[] = [
-  "DUPLEX", "APARTMENTS", "SHORTLET", "SUPERMARKET", "SCHOOL", "OFFICE",
+  "DUPLEX", "APARTMENTS", "SHORTLET", "SUPERMARKET", "SCHOOL", "HOSPITAL", "OFFICE",
 ];
 export const propertyTypeLabel = (t: PropertyType) =>
   ({
     DUPLEX: "Duplex", APARTMENTS: "Apartments", SHORTLET: "Shortlet",
-    SUPERMARKET: "Supermarket", SCHOOL: "School", OFFICE: "Office",
+    SUPERMARKET: "Supermarket", SCHOOL: "School", HOSPITAL: "Hospital", OFFICE: "Office",
   }[t]);
 
 export type Availability = "FOR_RENT" | "FOR_SALE" | "OCCUPIED" | "NONE";
@@ -60,6 +62,7 @@ export interface Property {
   createdAt: string;
   occupantName?: string;
   occupantUnit?: string;
+  occupantPhone?: string;
   occupantResidentId?: string;
   activities: PropertyActivity[];
   /** Set when temporarily removed. */

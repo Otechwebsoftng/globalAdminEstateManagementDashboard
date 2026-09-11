@@ -14,12 +14,18 @@ import { queryClient } from "../../lib/queryClient";
 import { assetApi, ASSETS_IS_MOCK } from "../../services/assetApi";
 import { availabilityLabel, propertyTypeLabel, type AssetKind } from "../../types/asset";
 
-function Row({ label, value, pill }: { label: string; value: React.ReactNode; pill?: boolean }) {
+function Row({
+  label, value, pill, pillTone = "blue",
+}: { label: string; value: React.ReactNode; pill?: boolean; pillTone?: "blue" | "slate" }) {
   return (
     <div className="flex items-center justify-between gap-3 py-3.5 border-b border-gray-50 last:border-0">
       <span className="text-[11px] font-bold text-gray-400">{label}</span>
       {pill ? (
-        <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">{value}</span>
+        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${
+          pillTone === "slate"
+            ? "text-slate-500 bg-slate-100 border-slate-200"
+            : "text-blue-600 bg-blue-50 border-blue-100"
+        }`}>{value}</span>
       ) : (
         <span className="text-xs font-black text-slate-900">{value}</span>
       )}
@@ -213,7 +219,12 @@ export default function PropertyDetail({
               <h3 className="text-sm font-black text-slate-900">Property Overview</h3>
               <Home className="h-4 w-4 text-gray-300" />
             </div>
-            <Row label="Availability" value={availabilityLabel(p.availability)} pill />
+            <Row
+              label="Availability"
+              value={availabilityLabel(p.availability)}
+              pill
+              pillTone={p.availability === "FOR_RENT" || p.availability === "FOR_SALE" ? "blue" : "slate"}
+            />
             <Row label="Property Type" value={propertyTypeLabel(p.propertyType)} />
             <Row label="Property No" value={p.houseNumber} />
             <Row label="Floor No" value={p.floorNumber} />
@@ -239,12 +250,14 @@ export default function PropertyDetail({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-black text-slate-900">{p.occupantName ?? "NIL"}</p>
-                <p className="text-[11px] font-bold text-gray-300">{p.occupantUnit ?? "-- -- --"}</p>
+                <p className="text-[11px] font-bold text-gray-400">
+                  {p.occupantPhone ?? "-- -- --"}
+                </p>
               </div>
               <button
-                disabled={!p.occupantResidentId}
+                disabled={!p.occupantName}
                 onClick={() => showToast("Resident linking is not wired yet.")}
-                className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-[11px] font-black text-slate-400 disabled:opacity-50 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 border border-blue-200 rounded-xl text-[11px] font-black text-blue-600 hover:bg-blue-50 disabled:text-slate-300 disabled:border-gray-200 disabled:hover:bg-transparent transition-colors"
               >
                 View Resident
                 <ExternalLink className="h-3 w-3" />

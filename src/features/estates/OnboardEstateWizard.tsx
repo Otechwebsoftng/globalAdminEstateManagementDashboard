@@ -227,6 +227,7 @@ export default function OnboardEstateWizard({
           isFirst={wizard.isFirst}
           isLast={wizard.isLast}
           isSubmitting={wizard.isSubmitting}
+          isStepValid={wizard.isStepValid}
           onBack={wizard.back}
           onNext={wizard.next}
           onSubmit={wizard.submit}
