@@ -20,10 +20,11 @@ import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
-import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi } from "../../services/api";
+import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi, healthApi } from "../../services/api";
 import { queryClient } from "../../lib/queryClient";
 import { qk } from "../../lib/queryKeys";
 import { parseList } from "../../lib/parseList";
+import { formatUptime } from "../../lib/uptime";
 import { fetchAllAdmins as fetchAllAdminsShared } from "../../lib/adminList";
 import { toSearchText, matchesSearchTerms } from "../../lib/search";
 import {
@@ -224,6 +225,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const { data: menuRaw } = useQuery({
     queryKey: qk.menu(),
     queryFn: () => menuApi.list(),
+  });
+
+  // Server uptime and health come from GET / (outside the /api/v1 prefix).
+  const { data: health } = useQuery({
+    queryKey: ["health"],
+    queryFn: () => healthApi.get(),
+    refetchInterval: 60_000,
+    retry: 1,
   });
 
   const { data: permissionsRaw } = useQuery({
@@ -1101,9 +1110,18 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 <div className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block font-sans">System Uptime</span>
-                    <span className="text-2xl font-black text-slate-950 block mt-1">1,234</span>
-                    <span className="text-[10px] text-blue-600 font-bold mt-1 inline-flex items-center gap-0.5 bg-blue-50 px-1.5 py-0.5 rounded">
-                      Stability: 100%
+                    <span className="text-2xl font-black text-slate-950 block mt-1">
+                      {formatUptime(health?.health?.uptime)}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold mt-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded capitalize ${
+                        health?.health?.status === "healthy"
+                          ? "text-emerald-600 bg-emerald-50"
+                          : "text-gray-400 bg-gray-50"
+                      }`}
+                    >
+                      {health?.health?.status ?? "unknown"}
+                      {health?.health?.environment ? ` · ${health.health.environment}` : ""}
                     </span>
                   </div>
                   <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">

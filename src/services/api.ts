@@ -605,3 +605,32 @@ export const residentApi = {
     });
   },
 };
+
+// ── Health ────────────────────────────────────────────────────
+
+export interface HealthResponse {
+  success: boolean;
+  message: string;
+  version: string;
+  timestamp: string;
+  responseTime: string;
+  health: {
+    status: string;
+    /** Process uptime in seconds. Resets when the server restarts. */
+    uptime: number;
+    environment: string;
+    memoryUsage: { heapUsed: string; heapTotal: string; rss: string };
+  };
+}
+
+export const healthApi = {
+  /** GET / — lives at the server root, outside the /api/v1 prefix. */
+  async get(): Promise<HealthResponse> {
+    const root = BASE_URL.replace(new RegExp(`${API_PREFIX}$`), "");
+    const res = await fetch(root || "/", {
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    });
+    if (!res.ok) throw new ApiError(`Health check failed (${res.status})`, res.status);
+    return res.json();
+  },
+};

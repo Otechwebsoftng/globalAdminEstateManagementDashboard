@@ -9,6 +9,7 @@ import AssetsPage from "../assets/AssetsPage";
 import SettingsPage from "../settings/SettingsPage";
 import { useAuth } from "../../context/AuthContext";
 import { useEstateScope } from "../../hooks/useEstateScope";
+import { useBackendMenu } from "../../hooks/useBackendMenu";
 
 const NAV = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/estate/dashboard" },
@@ -28,6 +29,7 @@ export default function EstateAdminPortal() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const scope = useEstateScope();
+  const menu = useBackendMenu();
 
   const active = useMemo(() => {
     const parts = location.pathname.split("/").filter(Boolean); // ["estate", section, sub?]
@@ -73,6 +75,17 @@ export default function EstateAdminPortal() {
     }
   };
 
+  // GET /menu is permission-filtered, so it wins when it returns rows.
+  // Flattened one level: this portal's sidebar is not nested.
+  const navItems = menu.hasMenu
+    ? menu.items.flatMap((n) => (n.children.length ? n.children : [n]))
+        .filter((n) => n.path)
+        .map((n) => ({ key: n.key, label: n.label, icon: n.icon, path: n.path }))
+    : NAV.map((n) => ({ key: n.key, label: n.label, icon: n.icon, path: n.path }));
+
+  const isActive = (path: string) => location.pathname === path
+    || (path !== "/estate/dashboard" && location.pathname.startsWith(path));
+
   return (
     <div className="bg-slate-50 min-h-screen font-sans flex text-slate-900">
       <aside className="hidden lg:flex flex-col w-64 bg-white shrink-0 border-r border-gray-200">
@@ -89,12 +102,12 @@ export default function EstateAdminPortal() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV.map((n) => (
+          {navItems.map((n) => (
             <button
               key={n.key}
               onClick={() => navigate(n.path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                active === n.key
+                isActive(n.path)
                   ? "bg-blue-50 text-blue-600 border-r-4 border-blue-600"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
               }`}
