@@ -162,5 +162,5 @@ const assetRealApi: AssetApi = {
   },
 };
 
-export const assetApi: AssetApi = USE_MOCKS ? (assetsMockApi as unknown as AssetApi) : assetRealApi;
+export const assetApi: AssetApi = USE_MOCKS ? assetsMockApi : assetRealApi;
 export const ASSETS_IS_MOCK = USE_MOCKS;

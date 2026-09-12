@@ -73,12 +73,12 @@ export const assetsMockApi = {
     return paginate(filtered, params.page ?? 1, params.pageSize ?? 10);
   },
 
-  async getById(id: string) {
+  async getById(id: string, _estateId?: string) {
     await simulateLatency();
     return store.find(id);
   },
 
-  async stats(kind: AssetKind) {
+  async stats(kind: AssetKind, _estateId?: string) {
     await simulateLatency();
     const all = store.all().filter((p) => p.kind === kind);
     return {
@@ -89,7 +89,7 @@ export const assetsMockApi = {
     };
   },
 
-  async create(dto: CreatePropertyDto): Promise<Property> {
+  async create(dto: CreatePropertyDto, _estateId?: string): Promise<Property> {
     await simulateLatency();
     const availability: Availability = dto.forRent ? "FOR_RENT" : dto.forSale ? "FOR_SALE" : "NONE";
     const created: Property = {
@@ -116,12 +116,12 @@ export const assetsMockApi = {
     return store.insert(created);
   },
 
-  async update(id: string, patch: Partial<Property>) {
+  async update(id: string, _estateId: string, patch: Partial<Property>) {
     await simulateLatency();
     return store.update(id, patch);
   },
 
-  async temporarilyRemove(id: string, reason: string) {
+  async temporarilyRemove(id: string, _estateId: string, reason: string) {
     await simulateLatency();
     return store.update(id, { status: "REMOVED", availability: "NONE", removedReason: reason });
   },

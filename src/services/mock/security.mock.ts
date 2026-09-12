@@ -67,12 +67,12 @@ export const securityMockApi = {
     return paginate(filtered, params.page ?? 1, params.pageSize ?? 10);
   },
 
-  async getById(id: string): Promise<SecurityPersonnel | undefined> {
+  async getById(id: string, _estateId?: string): Promise<SecurityPersonnel | undefined> {
     await simulateLatency();
     return store.find(id);
   },
 
-  async stats() {
+  async stats(_estateId?: string) {
     await simulateLatency();
     const all = store.all();
     return {
@@ -83,7 +83,7 @@ export const securityMockApi = {
     };
   },
 
-  async create(dto: any): Promise<SecurityPersonnel> {
+  async create(dto: any, _estateId?: string): Promise<SecurityPersonnel> {
     await simulateLatency();
     const all = store.all();
     if (all.some((p) => p.email.toLowerCase() === String(dto.email).toLowerCase())) {
@@ -110,7 +110,7 @@ export const securityMockApi = {
     return store.insert(created);
   },
 
-  async setStatus(id: string, status: SecurityPersonnel["status"]) {
+  async setStatus(id: string, status: SecurityPersonnel["status"], _estateId?: string) {
     await simulateLatency();
     return store.update(id, { status });
   },

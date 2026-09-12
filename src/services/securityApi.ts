@@ -108,6 +108,6 @@ const securityRealApi: SecurityApi = {
   },
 };
 
-export const securityApi: SecurityApi = USE_MOCKS ? (securityMockApi as unknown as SecurityApi) : securityRealApi;
+export const securityApi: SecurityApi = USE_MOCKS ? securityMockApi : securityRealApi;
 export const SECURITY_IS_MOCK = USE_MOCKS;
 export const resetSecurityMocks = () => securityMockApi.reset();
