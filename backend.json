@@ -1,1 +1,3686 @@
-{"openapi":"3.0.0","paths":{"/":{"get":{"operationId":"AppController_getRoot","summary":"Welcome endpoint with health check","parameters":[],"responses":{"200":{"description":"Welcome message with application health","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HealthCheckResponseDto"}}}}},"tags":["Root"]}},"/api/v1/auth/estate-admin/login":{"post":{"operationId":"AuthController_estateAdminLogin","summary":"Estate Admin Login","description":"Authenticate an estate admin with email and password. Returns an MFA token and sends an OTP to the admin email.","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginDto"}}}},"responses":{"200":{"description":"OTP sent to email, MFA token returned"},"401":{"description":"Invalid email or password"},"403":{"description":"Account is restricted or deleted"}},"tags":["Auth"]}},"/api/v1/auth/global-admin/login":{"post":{"operationId":"AuthController_adminLogin","summary":"Global Admin Login","description":"Authenticate a global admin with email and password. Returns an MFA token and sends an OTP to the admin email.","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginDto"}}}},"responses":{"200":{"description":"OTP sent to email, MFA token returned"},"401":{"description":"Invalid email or password"},"403":{"description":"Account is restricted or deleted"}},"tags":["Auth"]}},"/api/v1/auth/admin/verify-user":{"patch":{"operationId":"AuthController_verifyAdmin","summary":"Verify Admin OTP","description":"Validates the OTP sent to the admin email after login. Returns a full-access JWT token on success.","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ActivateAccountDto"}}}},"responses":{"200":{"description":"OTP verified, full-access token returned"},"400":{"description":"OTP expired or invalid"},"401":{"description":"Incorrect OTP"},"404":{"description":"Admin account not found"}},"tags":["Auth"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin":{"get":{"operationId":"GlobalAdminController_getAll","summary":"Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status","description":"Fetch all active onboarded , with optional status filter","parameters":[{"name":"page","required":false,"in":"query","description":"Page number for pagination","schema":{"type":"number"}},{"name":"pageSize","required":false,"in":"query","description":"Number of users to return per page","schema":{"type":"number"}},{"name":"search","required":false,"in":"query","description":"Search for users by firstName, lastName, or email","schema":{"type":"string"}},{"name":"userStatus","required":false,"in":"query","description":"Filter by status","schema":{"enum":["active","inactive","suspended","flagged"],"type":"string"}}],"responses":{"200":{"description":"Paginated list of global admins"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/dashboard":{"get":{"operationId":"GlobalAdminController_dashboard","summary":"Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status","description":"Dashboard statistics","parameters":[],"responses":{"200":{"description":"Dashboard statistics returned"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/onboard-admin":{"post":{"operationId":"GlobalAdminController_create","summary":"Only a admin with this privilege can onboard an admin","description":" Onboard a new Admin","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateAdminDto"}}}},"responses":{"201":{"description":"Admin created successfully"},"404":{"description":"Role not found"},"409":{"description":"Admin already exists"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/edit-profile":{"put":{"operationId":"GlobalAdminController_update","summary":"Admins can update their profile record","description":" Update Admin Record","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateAdminDto"}}}},"responses":{"200":{"description":""}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/forgot-password":{"patch":{"operationId":"GlobalAdminController_forgotPassword","summary":"Sends a token to an existing user","description":"Sends a token to an existing user","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SendPasswordOtpDto"}}}},"responses":{"200":{"description":"OTP sent to email address"},"404":{"description":"Account not found"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/verify-password-otp":{"patch":{"operationId":"GlobalAdminController_verifyPassword","summary":"Users can verify OTP for password reset.","description":" Verify OTP for password reset","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ActivateAccountDto"}}}},"responses":{"200":{"description":"OTP verified successfully"},"400":{"description":"OTP expired or incorrect"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/resend-otp":{"patch":{"operationId":"GlobalAdminController_resendOTP","summary":"Resend OTP to user ","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ResendOTPDto"}}}},"responses":{"200":{"description":"OTP resent successfully"},"404":{"description":"Admin record not found"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/reset-password/{otp}":{"patch":{"operationId":"GlobalAdminController_restPassword","summary":"Users can reset their password.","description":"Reset user password","parameters":[{"name":"otp","required":true,"in":"path","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ResetPasswordDto"}}}},"responses":{"200":{"description":"Password reset successfully"},"400":{"description":"Invalid or expired OTP"},"404":{"description":"User not found"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/{adminId}":{"get":{"operationId":"GlobalAdminController_viewOne","summary":"Admins such as human resource, super admin can view an admin by Id","description":"View an Admin by Id","parameters":[{"name":"adminId","required":true,"in":"path","schema":{"type":"string"}}],"responses":{"200":{"description":"Admin details returned"},"404":{"description":"Admin not found"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/{adminId}/update-role":{"put":{"operationId":"GlobalAdminController_updateRole","summary":"Only a super admin can can update an admin role admin","description":" Update an Admin role","parameters":[{"name":"adminId","required":true,"in":"path","description":"Id of the admin role to be changed","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateAdminRoleDto"}}}},"responses":{"200":{"description":"Admin role updated"},"404":{"description":"Admin or role not found"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/{adminId}/soft-delete":{"patch":{"operationId":"GlobalAdminController_softDelete","summary":"Only a super admin , human resource admins can soft delete an admin ","description":" Soft delete an Admin","parameters":[{"name":"adminId","required":true,"in":"path","description":"Id of the admin role to be soft deleted","schema":{"type":"string"}}],"responses":{"200":{"description":"Admin deactivated successfully"},"400":{"description":"Self-deletion is not permitted"},"404":{"description":"Admin not found or already deleted"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/{adminId}/restore":{"patch":{"operationId":"GlobalAdminController_restore","summary":"Only a super admin , human resource admins can soft delete an admin ","description":" Restore a suspended admin ","parameters":[{"name":"adminId","required":true,"in":"path","description":"Id of the admin role to be restored","schema":{"type":"string"}}],"responses":{"200":{"description":"Admin restored successfully"},"404":{"description":"Admin not found or already deleted"}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/global-admin/{userId}/suspend":{"patch":{"operationId":"GlobalAdminController_delete","summary":"Only a super admin can permanently delete an admin ","description":" delete a suspended admin ","parameters":[{"name":"userId","required":true,"in":"path","description":"Id of the admin to be deleted","schema":{"type":"string"}}],"responses":{"200":{"description":""}},"tags":["global-admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/role":{"get":{"operationId":"RoleController_getAll","summary":"Admins such as super admin can fetch all active onboarded Admins, optionally filtered by status","description":"Fetch Roles","parameters":[],"responses":{"200":{"description":"List of all roles with permissions"}},"tags":["Role"],"security":[{"JWT-auth":[]}]},"post":{"operationId":"RoleController_create","summary":"Admins such as super admin can create an admin role","description":"Create a role","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateRoleDto"}}}},"responses":{"201":{"description":"Role created with permissions"},"404":{"description":"One or more permissions not found"}},"tags":["Role"],"security":[{"JWT-auth":[]}]}},"/api/v1/role/{roleId}":{"get":{"operationId":"RoleController_viewOne","summary":"Admins such as super admin can fetch all active onboarded Admins","description":"Fetch a single role","parameters":[{"name":"roleId","required":true,"in":"path","schema":{"type":"string"}}],"responses":{"200":{"description":"Role details with permissions"},"404":{"description":"Role not found"}},"tags":["Role"],"security":[{"JWT-auth":[]}]},"put":{"operationId":"RoleController_update","summary":"Admins such as super admin can update an admin role","description":"Update a role","parameters":[{"name":"roleId","required":true,"in":"path","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateRoleDto"}}}},"responses":{"200":{"description":"Role updated successfully"},"404":{"description":"Role or permissions not found"}},"tags":["Role"],"security":[{"JWT-auth":[]}]},"delete":{"operationId":"RoleController_delete","summary":"Admins such as super admin can Delete an admin role","description":"Delete a role","parameters":[{"name":"roleId","required":true,"in":"path","schema":{"type":"string"}}],"responses":{"200":{"description":"Role deleted successfully"},"404":{"description":"Role not found"}},"tags":["Role"],"security":[{"JWT-auth":[]}]}},"/api/v1/permission":{"get":{"operationId":"PermissionController_getAll","summary":"Fetch all permissions","description":"Fetch all permissions. Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status","parameters":[],"responses":{"200":{"description":"List of all permissions"}},"tags":["Permissions"],"security":[{"JWT-auth":[]}]}},"/api/v1/permission/slug":{"get":{"operationId":"PermissionController_getOne","summary":"Fetch a specific permission by slug","description":"Fetch a specific permission by slug. Admins such as human resource, super admin can","parameters":[{"name":"slug","required":true,"in":"path","schema":{"type":"string"}}],"responses":{"200":{"description":"Permission details returned"},"409":{"description":"Permission not found"}},"tags":["Permissions"],"security":[{"JWT-auth":[]}]}},"/api/v1/menu":{"get":{"operationId":"MenuController_getMenu","summary":"Return menu base on permissions","description":"Fetch Menu ","parameters":[],"responses":{"200":{"description":"Menu tree based on user permissions"}},"tags":["Menu"],"security":[{"JWT-auth":[]}]},"post":{"operationId":"MenuController_createParentMenu","summary":"Create parent menu item","description":"Create Parent menu Items","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateMenuDto"}}}},"responses":{"201":{"description":"Parent menu item created"},"404":{"description":"Permissions not found"},"409":{"description":"Menu with this name already exists"}},"tags":["Menu"],"security":[{"JWT-auth":[]}]}},"/api/v1/menu/{parentId}/child-menu":{"post":{"operationId":"MenuController_createChildMenu","summary":"Create parent menu item","description":"Create Parent menu Items","parameters":[{"name":"parentId","required":true,"in":"path","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateMenuDto"}}}},"responses":{"201":{"description":"Child menu item created under parent"},"404":{"description":"Parent menu or permissions not found"},"409":{"description":"Menu with this name already exists"}},"tags":["Menu"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate":{"get":{"operationId":"EstateController_getAll","summary":"Global admin can fetch all estates","description":"Fetch all estates with optional filters","parameters":[{"name":"page","required":false,"in":"query","description":"Page number","schema":{"type":"number"}},{"name":"pageSize","required":false,"in":"query","description":"Items per page","schema":{"type":"number"}},{"name":"search","required":false,"in":"query","description":"Search by estate name or CAC","schema":{"type":"string"}},{"name":"status","required":false,"in":"query","description":"Comma-separated statuses (active,inactive,suspended)","schema":{"type":"string"}},{"name":"state","required":false,"in":"query","schema":{"type":"string"}}],"responses":{"200":{"description":"Paginated list of estates returned"},"401":{"description":"Unauthorized"}},"tags":["Estate"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate/{estateId}":{"get":{"operationId":"EstateController_viewOne","summary":"View estate details including resident and staff counts","description":"View a single estate by ID","parameters":[{"name":"estateId","required":true,"in":"path","description":"Estate ID","schema":{"type":"string"}}],"responses":{"200":{"description":"Estate details with resident, staff, and admin counts"},"404":{"description":"Estate not found"}},"tags":["Estate"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate/{id}/residents":{"get":{"operationId":"EstateController_getResidents","summary":"Get paginated residents with domestic staff count","description":"Fetch residents belonging to an estate","parameters":[{"name":"id","required":true,"in":"path","description":"Estate ID","schema":{"type":"string"}},{"name":"page","required":false,"in":"query","schema":{"type":"number"}},{"name":"pageSize","required":false,"in":"query","schema":{"type":"number"}},{"name":"status","required":false,"in":"query","schema":{"type":"string"}},{"name":"search","required":false,"in":"query","schema":{"type":"string"}}],"responses":{"200":{"description":"Paginated residents with domestic staff counts"}},"tags":["Estate"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate/onboard-estate":{"post":{"operationId":"EstateController_create","summary":"Any estate owner can register their estate","description":"Onboard a new Estate and contact admin","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateEstateDto"}}}},"responses":{"201":{"description":"Estate and contact admin created"},"409":{"description":"Admin with this email already exists"}},"tags":["Estate"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate/{id}":{"put":{"operationId":"EstateController_update","summary":"Only the contact admin can update estate details","description":"Update estate details","parameters":[{"name":"id","required":true,"in":"path","description":"Estate ID","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/EditEstateDto"}}}},"responses":{"200":{"description":"Estate updated successfully"},"404":{"description":"Estate not found or unauthorized"},"409":{"description":"Estate with this CAC already exists"}},"tags":["Estate"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin":{"get":{"operationId":"EstateAdminController_getAll","summary":"Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status","description":"Fetch all active onboarded , with optional status filter","parameters":[{"name":"page","required":false,"in":"query","description":"Page number for pagination","schema":{"type":"number"}},{"name":"pageSize","required":false,"in":"query","description":"Number of users to return per page","schema":{"type":"number"}},{"name":"search","required":false,"in":"query","description":"Search for users by firstName, lastName, or email","schema":{"type":"string"}},{"name":"userStatus","required":false,"in":"query","description":"Filter by status","schema":{"enum":["active","inactive","suspended","flagged"],"type":"string"}}],"responses":{"200":{"description":"Paginated list of estate admins"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/onboard-admin":{"post":{"operationId":"EstateAdminController_create","summary":"Only a admin with this privilege can onboard an admin","description":" Onboard a new Admin","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateEstateAdminDto"}}}},"responses":{"201":{"description":"Admin created successfully"},"404":{"description":"Admin estate or role not found"},"409":{"description":"Admin already exists"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/forgot-password":{"patch":{"operationId":"EstateAdminController_forgotPassword","summary":"Sends a token to an existing user","description":"Sends a token to an existing user","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SendPasswordOtpDto"}}}},"responses":{"200":{"description":"OTP sent to email address"},"404":{"description":"Account not found"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/verify-password-otp":{"patch":{"operationId":"EstateAdminController_verifyPassword","summary":"Users can verify OTP for password reset.","description":" Verify OTP for password reset","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ActivateAccountDto"}}}},"responses":{"200":{"description":"OTP verified successfully"},"400":{"description":"OTP expired or incorrect"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/resend-otp":{"patch":{"operationId":"EstateAdminController_resendOTP","summary":"Resend OTP to user ","parameters":[],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ResendOTPDto"}}}},"responses":{"200":{"description":"OTP resent successfully"},"404":{"description":"Admin record not found"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/reset-password/{otp}":{"patch":{"operationId":"EstateAdminController_restPassword","summary":"Users can reset their password.","description":"Reset user password","parameters":[{"name":"otp","required":true,"in":"path","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ResetPasswordDto"}}}},"responses":{"200":{"description":"Password reset successfully"},"400":{"description":"Invalid or expired OTP"},"404":{"description":"User not found"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/{adminId}":{"get":{"operationId":"EstateAdminController_viewOne","summary":"Admins such as human resource, super admin can view an admin by Id","description":"View an Admin by Id","parameters":[{"name":"adminId","required":true,"in":"path","schema":{"type":"string"}}],"responses":{"200":{"description":"Admin details returned"},"404":{"description":"Admin not found"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/{adminId}/update-role":{"put":{"operationId":"EstateAdminController_update","summary":"Only a super admin can can update an admin role admin","description":" Update an Admin role","parameters":[{"name":"adminId","required":true,"in":"path","description":"Id of the admin role to be changed","schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateEstateAdminRoleDto"}}}},"responses":{"200":{"description":"Admin role updated"},"404":{"description":"Admin or role not found"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/{adminId}/soft-delete":{"patch":{"operationId":"EstateAdminController_softDelete","summary":"Only a super admin , human resource admins can soft delete an admin ","description":" Soft delete an Admin","parameters":[{"name":"adminId","required":true,"in":"path","description":"Id of the admin role to be soft deleted","schema":{"type":"string"}}],"responses":{"200":{"description":"Admin deactivated successfully"},"400":{"description":"Self-deletion is not permitted"},"404":{"description":"Admin not found or already deleted"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/{adminId}/restore":{"patch":{"operationId":"EstateAdminController_restore","summary":"Only a super admin , human resource admins can soft delete an admin ","description":" Restore a suspended admin ","parameters":[{"name":"adminId","required":true,"in":"path","description":"Id of the admin role to be restored","schema":{"type":"string"}}],"responses":{"200":{"description":"Admin restored successfully"},"404":{"description":"Admin not found"}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}},"/api/v1/estate-admin/{userId}/suspend":{"patch":{"operationId":"EstateAdminController_delete","summary":"Only a super admin can permanently delete an admin ","description":" delete a suspended admin ","parameters":[{"name":"userId","required":true,"in":"path","description":"Id of the admin to be deleted","schema":{"type":"string"}}],"responses":{"200":{"description":""}},"tags":["Estate Admin"],"security":[{"JWT-auth":[]}]}}},"info":{"title":"Estate Management API","description":"REST API for managing residential estates, administrators, residents, domestic staff, roles, permissions, and dynamic menus.\n\n## Authentication\nAll protected endpoints require a JWT bearer token. Login via the Auth endpoints to receive an MFA-gated token, then verify with the OTP sent to your email to obtain a full-access token.\n\n## Modules\n| Module | Description |\n|--------|-------------|\n| **Auth** | Login (global & estate admin), MFA verification |\n| **Global Admin** | Super admin CRUD, dashboard stats, OTP & password flows |\n| **Estate** | Estate onboarding, listing, update, resident queries |\n| **Estate Admin** | Estate-scoped admin CRUD, role assignment |\n| **Role** | Role CRUD with permission assignment |\n| **Permission** | Read-only permission listing |\n| **Menu** | Dynamic menu tree based on user permissions |","version":"1.0.0","contact":{"name":"Estate Management Team","url":"","email":""},"license":{"name":"UNLICENSED","url":""}},"tags":[{"name":"Root","description":"Health check endpoint"},{"name":"Auth","description":"Authentication & MFA verification"},{"name":"global-admin","description":"Global administrator management"},{"name":"Estate","description":"Estate onboarding & management"},{"name":"Estate Admin","description":"Estate-scoped administrator management"},{"name":"Role","description":"Role & permission assignment"},{"name":"Permissions","description":"Permission listing"},{"name":"Menu","description":"Dynamic menu management"}],"servers":[],"components":{"securitySchemes":{"JWT-auth":{"scheme":"bearer","bearerFormat":"JWT","type":"http","name":"Authorization","description":"Enter your JWT token","in":"header"}},"schemas":{"MemoryUsageDto":{"type":"object","properties":{"heapUsed":{"type":"string","example":"45.23 MB","description":"Heap memory used"},"heapTotal":{"type":"string","example":"67.89 MB","description":"Total heap memory"},"rss":{"type":"string","example":"123.45 MB","description":"Resident set size"}},"required":["heapUsed","heapTotal","rss"]},"HealthDto":{"type":"object","properties":{"status":{"type":"string","example":"healthy","description":"Server health status"},"uptime":{"type":"number","example":123.456,"description":"Server uptime in seconds"},"environment":{"type":"string","example":"development","description":"Current environment"},"memoryUsage":{"description":"Memory usage statistics","allOf":[{"$ref":"#/components/schemas/MemoryUsageDto"}]}},"required":["status","uptime","environment","memoryUsage"]},"HealthCheckResponseDto":{"type":"object","properties":{"success":{"type":"boolean","example":true,"description":"Request success status"},"message":{"type":"string","example":"Welcome to FIN_TECH WHITE LABEL API","description":"Welcome message"},"version":{"type":"string","example":"1.0","description":"API version"},"timestamp":{"type":"string","example":"2026-03-27T10:00:00.000Z","description":"Response timestamp"},"responseTime":{"type":"string","example":"1.23 ms","description":"Response time"},"health":{"description":"Server health information","allOf":[{"$ref":"#/components/schemas/HealthDto"}]}},"required":["success","message","version","timestamp","responseTime","health"]},"LoginDto":{"type":"object","properties":{"email":{"type":"string","example":"john.doe@example.com"},"password":{"type":"string","example":"fhgtytye@r4d12"}},"required":["email","password"]},"ActivateAccountDto":{"type":"object","properties":{"otpType":{"type":"string","enum":["SIGN_UP","CHANGE_PASSWORD","FORGOT_PASSWORD","ADMIN_LOGIN"]},"otp":{"type":"string","description":"OTP code sent to the user","example":"123456"},"email":{"type":"string"}},"required":["otpType","otp","email"]},"CreateAdminDto":{"type":"object","properties":{"firstName":{"type":"string","example":"John"},"lastName":{"type":"string","example":"Doe"},"email":{"type":"string","example":"john.doe@example.com"},"countryCode":{"type":"string","example":"+234"},"phoneNumber":{"type":"string","example":"9069699734"},"roleId":{"type":"string","example":"w12234237863878hhjeg653622"}},"required":["firstName","lastName","email","countryCode","phoneNumber","roleId"]},"SendPasswordOtpDto":{"type":"object","properties":{"email":{"type":"string"}},"required":["email"]},"ResendOTPDto":{"type":"object","properties":{"otpType":{"type":"string","enum":["SIGN_UP","CHANGE_PASSWORD","FORGOT_PASSWORD","ADMIN_LOGIN"]},"email":{"type":"string"}},"required":["otpType","email"]},"ResetPasswordDto":{"type":"object","properties":{"password":{"type":"string"},"email":{"type":"string"}},"required":["password","email"]},"UpdateAdminRoleDto":{"type":"object","properties":{"roleId":{"type":"Role Id"}},"required":["roleId"]},"CreateRoleDto":{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"permissionIds":{"type":"array","items":{"type":"string"}}},"required":["name","description","permissionIds"]},"UpdateRoleDto":{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"permissionIds":{"type":"array","items":{"type":"string"}}},"required":["name","description","permissionIds"]},"CreateMenuDto":{"type":"object","properties":{"name":{"type":"string","description":"Menu name"},"url":{"type":"string","description":"Menu url"},"icon":{"type":"string","description":"Menu icon name"},"order":{"type":"number","description":"Menu order"},"parentId":{"type":"string","description":"Menu parent Id"},"permissions":{"description":"Menu Permissions","type":"array","items":{"type":"string"}}},"required":["name","url","icon","order","parentId","permissions"]},"CreateEstateDto":{"type":"object","properties":{"estateName":{"type":"string","example":"Estate Name"},"firstName":{"type":"string","example":"John"},"lastName":{"type":"string","example":"Doe"},"cac":{"type":"string","example":"CAC number"},"countryCode":{"type":"string","example":"countryCode"},"phoneNumber":{"type":"string","example":"Phone number"},"email":{"type":"string","example":"john.doe@example.com"},"address":{"type":"string","example":"Address"},"city":{"type":"string","example":"City"},"state":{"type":"string","example":"State"},"country":{"type":"string","example":"Country"}},"required":["estateName","firstName","lastName","cac","countryCode","phoneNumber","email","address","city","state","country"]},"EditEstateDto":{"type":"object","properties":{"estateName":{"type":"string","example":"Estate Name"},"cac":{"type":"string","example":"CAC number"},"address":{"type":"string","example":"Address"},"lga":{"type":"string","example":"Local government area"},"city":{"type":"string","example":"City"},"state":{"type":"string","example":"State"},"country":{"type":"string","example":"Country"}},"required":["estateName","cac","address","lga","city","state","country"]},"CreateEstateAdminDto":{"type":"object","properties":{"firstName":{"type":"string","example":"John"},"lastName":{"type":"string","example":"Doe"},"email":{"type":"string","example":"john.doe@example.com"},"roleId":{"type":"string","example":"w12234237863878hhjeg653622"}},"required":["firstName","lastName","email","roleId"]},"UpdateEstateAdminRoleDto":{"type":"object","properties":{"roleId":{"type":"Role Id"}},"required":["roleId"]}}}}
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_getRoot",
+        "summary": "Welcome endpoint with health check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Welcome message with application health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheckResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Root"
+        ]
+      }
+    },
+    "/api/v1/auth/estate-admin/login": {
+      "post": {
+        "operationId": "AuthController_estateAdminLogin",
+        "summary": "Estate Admin Login",
+        "description": "Authenticate an estate admin with email and password. Returns an MFA token and sends an OTP to the admin email.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent to email, MFA token returned"
+          },
+          "401": {
+            "description": "Invalid email or password"
+          },
+          "403": {
+            "description": "Account is restricted or deleted"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/resident/login": {
+      "post": {
+        "operationId": "AuthController_residentLogin",
+        "summary": "Resident Login",
+        "description": "Authenticate a resident with email and password.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User logged in successfully"
+          },
+          "401": {
+            "description": "Invalid email or password"
+          },
+          "403": {
+            "description": "Account is restricted or deleted"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/security/login": {
+      "post": {
+        "operationId": "AuthController_securityLogin",
+        "summary": "security Login",
+        "description": "Authenticate a security with email and password.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User logged in successfully"
+          },
+          "401": {
+            "description": "Invalid email or password"
+          },
+          "403": {
+            "description": "Account is restricted or deleted"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/global-admin/login": {
+      "post": {
+        "operationId": "AuthController_adminLogin",
+        "summary": "Global Admin Login",
+        "description": "Authenticate a global admin with email and password. Returns an MFA token and sends an OTP to the admin email.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent to email, MFA token returned"
+          },
+          "401": {
+            "description": "Invalid email or password"
+          },
+          "403": {
+            "description": "Account is restricted or deleted"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/admin/verify-user": {
+      "patch": {
+        "operationId": "AuthController_verifyAdmin",
+        "summary": "Verify Admin OTP",
+        "description": "Validates the OTP sent to the admin email after login. Returns a full-access JWT token on success.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified, full-access token returned"
+          },
+          "400": {
+            "description": "OTP expired or invalid"
+          },
+          "401": {
+            "description": "Incorrect OTP"
+          },
+          "404": {
+            "description": "Admin account not found"
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/role": {
+      "get": {
+        "operationId": "RoleController_getAll",
+        "summary": "Admins such as super admin can fetch all active onboarded Admins, optionally filtered by status",
+        "description": "Fetch Roles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of all roles with permissions"
+          }
+        },
+        "tags": [
+          "Role"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "RoleController_create",
+        "summary": "Admins such as super admin can create an admin role",
+        "description": "Create a role",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Role created with permissions"
+          },
+          "404": {
+            "description": "One or more permissions not found"
+          }
+        },
+        "tags": [
+          "Role"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/role/{roleId}": {
+      "get": {
+        "operationId": "RoleController_viewOne",
+        "summary": "Admins such as super admin can fetch all active onboarded Admins",
+        "description": "Fetch a single role",
+        "parameters": [
+          {
+            "name": "roleId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role details with permissions"
+          },
+          "404": {
+            "description": "Role not found"
+          }
+        },
+        "tags": [
+          "Role"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "RoleController_update",
+        "summary": "Admins such as super admin can update an admin role",
+        "description": "Update a role",
+        "parameters": [
+          {
+            "name": "roleId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated successfully"
+          },
+          "404": {
+            "description": "Role or permissions not found"
+          }
+        },
+        "tags": [
+          "Role"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "RoleController_delete",
+        "summary": "Admins such as super admin can Delete an admin role",
+        "description": "Delete a role",
+        "parameters": [
+          {
+            "name": "roleId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role deleted successfully"
+          },
+          "404": {
+            "description": "Role not found"
+          }
+        },
+        "tags": [
+          "Role"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/permission": {
+      "get": {
+        "operationId": "PermissionController_getAll",
+        "summary": "Fetch all permissions",
+        "description": "Fetch all permissions. Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of all permissions"
+          }
+        },
+        "tags": [
+          "Permissions"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/permission/slug": {
+      "get": {
+        "operationId": "PermissionController_getOne",
+        "summary": "Fetch a specific permission by slug",
+        "description": "Fetch a specific permission by slug. Admins such as human resource, super admin can",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permission details returned"
+          },
+          "409": {
+            "description": "Permission not found"
+          }
+        },
+        "tags": [
+          "Permissions"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/menu": {
+      "get": {
+        "operationId": "MenuController_getMenu",
+        "summary": "Return menu base on permissions",
+        "description": "Fetch Menu ",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Menu tree based on user permissions"
+          }
+        },
+        "tags": [
+          "Menu"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "MenuController_createParentMenu",
+        "summary": "Create parent menu item",
+        "description": "Create Parent menu Items",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Parent menu item created"
+          },
+          "404": {
+            "description": "Permissions not found"
+          },
+          "409": {
+            "description": "Menu with this name already exists"
+          }
+        },
+        "tags": [
+          "Menu"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/menu/{parentId}/child-menu": {
+      "post": {
+        "operationId": "MenuController_createChildMenu",
+        "summary": "Create parent menu item",
+        "description": "Create Parent menu Items",
+        "parameters": [
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Child menu item created under parent"
+          },
+          "404": {
+            "description": "Parent menu or permissions not found"
+          },
+          "409": {
+            "description": "Menu with this name already exists"
+          }
+        },
+        "tags": [
+          "Menu"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin": {
+      "get": {
+        "operationId": "GlobalAdminController_getAll",
+        "summary": "Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status",
+        "description": "Fetch all active onboarded , with optional status filter",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of users to return per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search for users by firstName, lastName, or email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userStatus",
+            "required": false,
+            "in": "query",
+            "description": "Filter by status",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive",
+                "suspended",
+                "flagged"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of global admins"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/dashboard": {
+      "get": {
+        "operationId": "GlobalAdminController_dashboard",
+        "summary": "Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status",
+        "description": "Dashboard statistics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Dashboard statistics returned"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/onboard-admin": {
+      "post": {
+        "operationId": "GlobalAdminController_create",
+        "summary": "Only a admin with this privilege can onboard an admin",
+        "description": " Onboard a new Admin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Admin created successfully"
+          },
+          "404": {
+            "description": "Role not found"
+          },
+          "409": {
+            "description": "Admin already exists"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/edit-profile": {
+      "put": {
+        "operationId": "GlobalAdminController_update",
+        "summary": "Admins can update their profile record",
+        "description": " Update Admin Record",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/forgot-password": {
+      "patch": {
+        "operationId": "GlobalAdminController_forgotPassword",
+        "summary": "Sends a token to an existing user",
+        "description": "Sends a token to an existing user",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendPasswordOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent to email address"
+          },
+          "404": {
+            "description": "Account not found"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/verify-password-otp": {
+      "patch": {
+        "operationId": "GlobalAdminController_verifyPassword",
+        "summary": "Users can verify OTP for password reset.",
+        "description": " Verify OTP for password reset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully"
+          },
+          "400": {
+            "description": "OTP expired or incorrect"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/resend-otp": {
+      "patch": {
+        "operationId": "GlobalAdminController_resendOTP",
+        "summary": "Resend OTP to user ",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendOTPDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP resent successfully"
+          },
+          "404": {
+            "description": "Admin record not found"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/reset-password/{otp}": {
+      "patch": {
+        "operationId": "GlobalAdminController_restPassword",
+        "summary": "Users can reset their password.",
+        "description": "Reset user password",
+        "parameters": [
+          {
+            "name": "otp",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successfully"
+          },
+          "400": {
+            "description": "Invalid or expired OTP"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/{adminId}": {
+      "get": {
+        "operationId": "GlobalAdminController_viewOne",
+        "summary": "Admins such as human resource, super admin can view an admin by Id",
+        "description": "View an Admin by Id",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin details returned"
+          },
+          "404": {
+            "description": "Admin not found"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "GlobalAdminController_delete",
+        "summary": "Only a super admin can permanently delete an admin ",
+        "description": " Permanently delete a suspended admin ",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin to be deleted",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/{adminId}/update-role": {
+      "put": {
+        "operationId": "GlobalAdminController_updateRole",
+        "summary": "Only a super admin can can update an admin role admin",
+        "description": " Update an Admin role",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin role to be changed",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin role updated"
+          },
+          "404": {
+            "description": "Admin or role not found"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/{adminId}/soft-delete": {
+      "patch": {
+        "operationId": "GlobalAdminController_softDelete",
+        "summary": "Only a super admin , human resource admins can soft delete an admin ",
+        "description": " Soft delete an Admin",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin role to be soft deleted",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin deactivated successfully"
+          },
+          "400": {
+            "description": "Self-deletion is not permitted"
+          },
+          "404": {
+            "description": "Admin not found or already deleted"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/global-admin/{adminId}/restore": {
+      "patch": {
+        "operationId": "GlobalAdminController_restore",
+        "summary": "Only a super admin , human resource admins can soft delete an admin ",
+        "description": " Restore a suspended admin ",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin role to be restored",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin restored successfully"
+          },
+          "404": {
+            "description": "Admin not found or already deleted"
+          }
+        },
+        "tags": [
+          "global-admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates": {
+      "get": {
+        "operationId": "EstateController_getAll",
+        "summary": "Global admin can fetch all estates",
+        "description": "Fetch all estates with optional filters",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Items per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by estate name or CAC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated statuses (active,inactive,suspended)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of estates returned"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/{estateId}": {
+      "get": {
+        "operationId": "EstateController_viewOne",
+        "summary": "Global admin can view an estate details including resident and staff counts",
+        "description": "View a single estate by ID",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estate details with resident, staff, and admin counts"
+          },
+          "404": {
+            "description": "Estate not found"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "EstateController_update",
+        "summary": "Only the contact admin can update estate details",
+        "description": "Update estate details",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditEstateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estate updated successfully"
+          },
+          "404": {
+            "description": "Estate not found or unauthorized"
+          },
+          "409": {
+            "description": "Estate with this CAC already exists"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/{estateId}/estate-admin/{adminId}": {
+      "get": {
+        "operationId": "EstateController_viewOwnEstateProfile",
+        "summary": "Estate admin can view their estate details including resident and staff counts",
+        "description": "An estate admin can view their own estate profile",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estate details with resident, staff, and admin counts"
+          },
+          "404": {
+            "description": "Estate not found"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/{estateId}/residents": {
+      "get": {
+        "operationId": "EstateController_getResidents",
+        "summary": "Get paginated residents with domestic staff count",
+        "description": "Fetch residents belonging to an estate",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated residents with domestic staff counts"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/onboard-estate": {
+      "post": {
+        "operationId": "EstateController_create",
+        "summary": "Any estate owner can register their estate",
+        "description": "Onboard a new Estate and contact admin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEstateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Estate and contact admin created"
+          },
+          "409": {
+            "description": "Admin with this email already exists"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/{id}/soft-delete": {
+      "patch": {
+        "operationId": "EstateController_softDelete",
+        "summary": "Only the contact admin can soft delete an estate",
+        "description": "Soft delete an estate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estate soft deleted successfully"
+          },
+          "404": {
+            "description": "Estate not found or unauthorized"
+          },
+          "409": {
+            "description": "Estate with this CAC already exists"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/{id}/restore-estate": {
+      "patch": {
+        "operationId": "EstateController_restore",
+        "summary": "Only the contact admin can restore an estate",
+        "description": "Restore a soft deleted estate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estate restored successfully"
+          },
+          "404": {
+            "description": "Estate not found or unauthorized"
+          },
+          "409": {
+            "description": "Estate with this CAC already exists"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estates/{id}/delete": {
+      "delete": {
+        "operationId": "EstateController_delete",
+        "summary": "Only the contact admin can delete an estate",
+        "description": "Delete an estate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Estate ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estate deleted successfully"
+          },
+          "404": {
+            "description": "Estate not found or unauthorized"
+          },
+          "409": {
+            "description": "Estate with this CAC already exists"
+          }
+        },
+        "tags": [
+          "Estates"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin": {
+      "get": {
+        "operationId": "EstateAdminController_getAll",
+        "summary": "Admins such as human resource, super admin can fetch all active onboarded Admins, optionally filtered by status",
+        "description": "Fetch all active onboarded , with optional status filter",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of users to return per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search for users by firstName, lastName, or email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userStatus",
+            "required": false,
+            "in": "query",
+            "description": "Filter by status",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive",
+                "suspended",
+                "flagged"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of estate admins"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/onboard-admin": {
+      "post": {
+        "operationId": "EstateAdminController_create",
+        "summary": "Only a admin with this privilege can onboard an admin",
+        "description": " Onboard a new Admin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEstateAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Admin created successfully"
+          },
+          "404": {
+            "description": "Admin estate or role not found"
+          },
+          "409": {
+            "description": "Admin already exists"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/forgot-password": {
+      "patch": {
+        "operationId": "EstateAdminController_forgotPassword",
+        "summary": "Sends a token to an existing user",
+        "description": "Sends a token to an existing user",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendPasswordOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent to email address"
+          },
+          "404": {
+            "description": "Account not found"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/verify-password-otp": {
+      "patch": {
+        "operationId": "EstateAdminController_verifyPassword",
+        "summary": "Users can verify OTP for password reset.",
+        "description": " Verify OTP for password reset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully"
+          },
+          "400": {
+            "description": "OTP expired or incorrect"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/resend-otp": {
+      "patch": {
+        "operationId": "EstateAdminController_resendOTP",
+        "summary": "Resend OTP to user ",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendOTPDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP resent successfully"
+          },
+          "404": {
+            "description": "Admin record not found"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/reset-password/{otp}": {
+      "patch": {
+        "operationId": "EstateAdminController_restPassword",
+        "summary": "Users can reset their password.",
+        "description": "Reset user password",
+        "parameters": [
+          {
+            "name": "otp",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successfully"
+          },
+          "400": {
+            "description": "Invalid or expired OTP"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/{adminId}": {
+      "get": {
+        "operationId": "EstateAdminController_viewOne",
+        "summary": "Admins such as human resource, super admin can view an admin by Id",
+        "description": "View an Admin by Id",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin details returned"
+          },
+          "404": {
+            "description": "Admin not found"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/{adminId}/update-role": {
+      "put": {
+        "operationId": "EstateAdminController_update",
+        "summary": "Only a super admin can can update an admin role admin",
+        "description": " Update an Admin role",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin role to be changed",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEstateAdminRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin role updated"
+          },
+          "404": {
+            "description": "Admin or role not found"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/{adminId}/soft-delete": {
+      "patch": {
+        "operationId": "EstateAdminController_softDelete",
+        "summary": "Only a super admin , human resource admins can soft delete an admin ",
+        "description": " Soft delete an Admin",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin role to be soft deleted",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin deactivated successfully"
+          },
+          "400": {
+            "description": "Self-deletion is not permitted"
+          },
+          "404": {
+            "description": "Admin not found or already deleted"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/{adminId}/restore": {
+      "patch": {
+        "operationId": "EstateAdminController_restore",
+        "summary": "Only a super admin , human resource admins can soft delete an admin ",
+        "description": " Restore a suspended admin ",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin role to be restored",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin restored successfully"
+          },
+          "404": {
+            "description": "Admin not found"
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/estate-admin/{userId}/delete": {
+      "delete": {
+        "operationId": "EstateAdminController_delete",
+        "summary": "Only a super admin can permanently delete an admin ",
+        "description": " delete a suspended admin ",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "Id of the admin to be deleted",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Estate Admin"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/estate/{estateId}": {
+      "get": {
+        "operationId": "UsersController_getAllUsers",
+        "summary": "Admin can fetch all users",
+        "description": " Fetch all users",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of users to return per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter users by status",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive",
+                "suspended",
+                "flagged"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search users by email, firstName or lastName",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estate",
+            "required": false,
+            "in": "query",
+            "description": "Filter users by estate",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "UsersController_generateVisitorCode",
+        "summary": "Resident can generate visitor codes for their guest",
+        "description": "Genrate Access Code",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitorCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/resend-otp": {
+      "patch": {
+        "operationId": "UsersController_resendOTP",
+        "summary": "Resend OTP to a user",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/forgot-password": {
+      "patch": {
+        "operationId": "UsersController_forgotPassword",
+        "summary": "Sends a token to an existing user",
+        "description": "Sends a token to an existing user",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendPasswordOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/verify-password-otp": {
+      "patch": {
+        "operationId": "UsersController_verifyPassword",
+        "summary": "Users can verify OTP for password reset.",
+        "description": " Verify OTP for password reset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/reset-password/{otp}": {
+      "patch": {
+        "operationId": "UsersController_restPassword",
+        "summary": "Users can reset their password.",
+        "description": "Reset user password",
+        "parameters": [
+          {
+            "name": "otp",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/{userId}/estate/{estateId}/remove-assignment": {
+      "patch": {
+        "operationId": "UsersController_removeResidentFromEstate",
+        "summary": "Admin remove resident from estate",
+        "description": "Remove a resident from an estate and any linked property assignments",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/{userId}/estate/{estateId}": {
+      "patch": {
+        "operationId": "UsersController_softDelete",
+        "summary": "Admin soft delete",
+        "description": "Soft Delete",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/residents/{userId}": {
+      "get": {
+        "operationId": "UsersController_viewUser",
+        "summary": "Admin can view a user Account",
+        "description": " View a user Account",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Residents"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/estate/{estateId}": {
+      "get": {
+        "operationId": "ResidentAssetsController_getAllUsers",
+        "summary": "Admin can fetch all users",
+        "description": " Fetch all users",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of users to return per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter property by status",
+            "schema": {
+              "enum": [
+                "available",
+                "occupied",
+                "unavailable",
+                "reserved"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "propertyType",
+            "required": false,
+            "in": "query",
+            "description": "Filter property by type",
+            "schema": {
+              "enum": [
+                "Duplex",
+                "Apartments",
+                "Shortlet",
+                "Hotel",
+                "SuperMarket",
+                "School",
+                "Hospital",
+                "Church",
+                "Office"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search users by email, firstName or lastName",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estate",
+            "required": false,
+            "in": "query",
+            "description": "Filter users by estate",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "ResidentAssetsController_create",
+        "summary": "Create new resident assets",
+        "description": "Create a new Resident fixed asset",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResidentFixedAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/{propertyId}/estate/{estateId}": {
+      "get": {
+        "operationId": "ResidentAssetsController_viewOne",
+        "summary": "Admin can fetch a single property",
+        "description": " Fetch a single property",
+        "parameters": [
+          {
+            "name": "propertyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/{propertyId}/estate/{estateId}/update": {
+      "patch": {
+        "operationId": "ResidentAssetsController_update",
+        "summary": "Update resident assets",
+        "description": "Estate admin with the right permission can update their own estate property",
+        "parameters": [
+          {
+            "name": "propertyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePropertyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/{userId}/estate/{estateId}/property/{propertyId}/remove": {
+      "patch": {
+        "operationId": "ResidentAssetsController_removeResidentFromProperty",
+        "summary": "Admin remove resident from property",
+        "description": "Remove a resident from a specific property within an estate",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "propertyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/{propertyId}/estate/{estateId}/soft-delete": {
+      "patch": {
+        "operationId": "ResidentAssetsController_softDelete",
+        "summary": "soft delete  resident assets",
+        "description": "Estate admin with the right permission can soft delete their own estate property",
+        "parameters": [
+          {
+            "name": "propertyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/{propertyId}/estate/{estateId}/restore": {
+      "patch": {
+        "operationId": "ResidentAssetsController_restore",
+        "summary": "Restore resident assets",
+        "description": "Estate admin with the right permission can restore a soft deleted own estate property",
+        "parameters": [
+          {
+            "name": "propertyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/resident-assets/{propertyId}/estate/{estateId}/delete": {
+      "delete": {
+        "operationId": "ResidentAssetsController_delete",
+        "summary": "Create new resident assets",
+        "description": "Estate admin with the right permission can soft delete their own estate property",
+        "parameters": [
+          {
+            "name": "propertyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Resident Assets"
+        ],
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/security-personnel/estate/{estateId}": {
+      "get": {
+        "operationId": "SecurityPersonnelController_getAllUsers",
+        "summary": "Admin can fetch all users",
+        "description": " Fetch all users",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of users to return per page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter users by status",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive",
+                "suspended",
+                "flagged"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search users by email, firstName or lastName",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estate",
+            "required": false,
+            "in": "query",
+            "description": "Filter users by estate",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      },
+      "post": {
+        "operationId": "SecurityPersonnelController_signup",
+        "summary": "Onboard new resident estate step1",
+        "description": "Estate admin can create a new estate resident Account",
+        "parameters": [
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardPersonnelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    },
+    "/api/v1/security-personnel/{userId}/estate/{estateId}": {
+      "get": {
+        "operationId": "SecurityPersonnelController_viewUser",
+        "summary": "Admin can view a security Account",
+        "description": " View a Security Account",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      },
+      "delete": {
+        "operationId": "SecurityPersonnelController_delete",
+        "summary": "Admin permanently delete personnel",
+        "description": "Permanent Delete",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    },
+    "/api/v1/security-personnel/update-profile": {
+      "patch": {
+        "operationId": "SecurityPersonnelController_updateProfile",
+        "summary": "Update profile",
+        "description": "Personnel can update their profile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    },
+    "/api/v1/security-personnel/verify-code": {
+      "post": {
+        "operationId": "SecurityPersonnelController_verifyAccessCode",
+        "summary": "Access code verification",
+        "description": "Security personnel can vaerify code",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    },
+    "/api/v1/security-personnel/{userId}/restore": {
+      "patch": {
+        "operationId": "SecurityPersonnelController_restore",
+        "summary": "Admin restore personnel",
+        "description": "Restore",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    },
+    "/api/v1/security-personnel/{userId}/estate/{estateId}/remove": {
+      "patch": {
+        "operationId": "SecurityPersonnelController_removePersonnelFromEstate",
+        "summary": "Admin remove personnel from estate",
+        "description": "Remove Personnel",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    },
+    "/api/v1/security-personnel/{userId}/soft-delete": {
+      "patch": {
+        "operationId": "SecurityPersonnelController_softDelete",
+        "summary": "Admin soft delete personnel from estate",
+        "description": "Soft Delete Personnel",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Security Personnel"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Estate Management API",
+    "description": "REST API for managing residential estates, administrators, residents, domestic staff, roles, permissions, and dynamic menus.\n\n## Authentication\nAll protected endpoints require a JWT bearer token. Login via the Auth endpoints to receive an MFA-gated token, then verify with the OTP sent to your email to obtain a full-access token.\n\n## Modules\n| Module | Description |\n|--------|-------------|\n| **Auth** | Login (global & estate admin), MFA verification |\n| **Global Admin** | Super admin CRUD, dashboard stats, OTP & password flows |\n| **Estate** | Estate onboarding, listing, update, resident queries |\n| **Estate Admin** | Estate-scoped admin CRUD, role assignment |\n| **Role** | Role CRUD with permission assignment |\n| **Permission** | Read-only permission listing |\n| **Menu** | Dynamic menu tree based on user permissions |,\n| **Resident Asset** | Onboarding and management of resident assets |,\n| **Security Personnel** | Onboarding and management of security personnel |,\n| **User** | User management |",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Estate Management Team",
+      "url": "",
+      "email": ""
+    },
+    "license": {
+      "name": "UNLICENSED",
+      "url": ""
+    }
+  },
+  "tags": [
+    {
+      "name": "Root",
+      "description": "Health check endpoint"
+    },
+    {
+      "name": "Auth",
+      "description": "Authentication & MFA verification"
+    },
+    {
+      "name": "global-admin",
+      "description": "Global administrator management"
+    },
+    {
+      "name": "Estate",
+      "description": "Estate onboarding & management"
+    },
+    {
+      "name": "Estate Admin",
+      "description": "Estate-scoped administrator management"
+    },
+    {
+      "name": "Role",
+      "description": "Role & permission assignment"
+    },
+    {
+      "name": "Permissions",
+      "description": "Permission listing"
+    },
+    {
+      "name": "Menu",
+      "description": "Dynamic menu management"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "description": "Enter your JWT token",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "MemoryUsageDto": {
+        "type": "object",
+        "properties": {
+          "heapUsed": {
+            "type": "string",
+            "example": "45.23 MB",
+            "description": "Heap memory used"
+          },
+          "heapTotal": {
+            "type": "string",
+            "example": "67.89 MB",
+            "description": "Total heap memory"
+          },
+          "rss": {
+            "type": "string",
+            "example": "123.45 MB",
+            "description": "Resident set size"
+          }
+        },
+        "required": [
+          "heapUsed",
+          "heapTotal",
+          "rss"
+        ]
+      },
+      "HealthDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "healthy",
+            "description": "Server health status"
+          },
+          "uptime": {
+            "type": "number",
+            "example": 123.456,
+            "description": "Server uptime in seconds"
+          },
+          "environment": {
+            "type": "string",
+            "example": "development",
+            "description": "Current environment"
+          },
+          "memoryUsage": {
+            "description": "Memory usage statistics",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MemoryUsageDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "uptime",
+          "environment",
+          "memoryUsage"
+        ]
+      },
+      "HealthCheckResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true,
+            "description": "Request success status"
+          },
+          "message": {
+            "type": "string",
+            "example": "Welcome to FIN_TECH WHITE LABEL API",
+            "description": "Welcome message"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0",
+            "description": "API version"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-03-27T10:00:00.000Z",
+            "description": "Response timestamp"
+          },
+          "responseTime": {
+            "type": "string",
+            "example": "1.23 ms",
+            "description": "Response time"
+          },
+          "health": {
+            "description": "Server health information",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "version",
+          "timestamp",
+          "responseTime",
+          "health"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "fhgtytye@r4d12"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "ActivateAccountDto": {
+        "type": "object",
+        "properties": {
+          "otpType": {
+            "type": "string",
+            "enum": [
+              "SIGN_UP",
+              "CHANGE_PASSWORD",
+              "FORGOT_PASSWORD",
+              "ADMIN_LOGIN"
+            ]
+          },
+          "otp": {
+            "type": "string",
+            "description": "OTP code sent to the user",
+            "example": "123456"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "otpType",
+          "otp",
+          "email"
+        ]
+      },
+      "CreateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "permissionIds"
+        ]
+      },
+      "UpdateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "permissionIds"
+        ]
+      },
+      "CreateMenuDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Menu name"
+          },
+          "url": {
+            "type": "string",
+            "description": "Menu url"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Menu icon name"
+          },
+          "order": {
+            "type": "number",
+            "description": "Menu order"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Menu parent Id"
+          },
+          "permissions": {
+            "description": "Menu Permissions",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "icon",
+          "order",
+          "parentId",
+          "permissions"
+        ]
+      },
+      "CreateAdminDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "countryCode": {
+            "type": "string",
+            "example": "+234"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "example": "9069699734"
+          },
+          "roleId": {
+            "type": "string",
+            "example": "w12234237863878hhjeg653622"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "countryCode",
+          "phoneNumber",
+          "roleId"
+        ]
+      },
+      "SendPasswordOtpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResendOTPDto": {
+        "type": "object",
+        "properties": {
+          "otpType": {
+            "type": "string",
+            "enum": [
+              "SIGN_UP",
+              "CHANGE_PASSWORD",
+              "FORGOT_PASSWORD",
+              "ADMIN_LOGIN"
+            ]
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "otpType",
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "example": "NewP@ss1234",
+            "minLength": 8
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@example.com"
+          }
+        },
+        "required": [
+          "password",
+          "email"
+        ]
+      },
+      "UpdateAdminRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "Role Id"
+          }
+        },
+        "required": [
+          "roleId"
+        ]
+      },
+      "CreateEstateDto": {
+        "type": "object",
+        "properties": {
+          "estateName": {
+            "type": "string",
+            "example": "Estate Name"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "cac": {
+            "type": "string",
+            "example": "CAC number"
+          },
+          "countryCode": {
+            "type": "string",
+            "example": "countryCode"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "example": "Phone number"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "address": {
+            "type": "string",
+            "example": "Address"
+          },
+          "city": {
+            "type": "string",
+            "example": "City"
+          },
+          "state": {
+            "type": "string",
+            "example": "State"
+          },
+          "country": {
+            "type": "string",
+            "example": "Country"
+          }
+        },
+        "required": [
+          "estateName",
+          "firstName",
+          "lastName",
+          "cac",
+          "countryCode",
+          "phoneNumber",
+          "email",
+          "address",
+          "city",
+          "state",
+          "country"
+        ]
+      },
+      "EditEstateDto": {
+        "type": "object",
+        "properties": {
+          "estateName": {
+            "type": "string",
+            "example": "Estate Name"
+          },
+          "cac": {
+            "type": "string",
+            "example": "CAC number"
+          },
+          "address": {
+            "type": "string",
+            "example": "Address"
+          },
+          "lga": {
+            "type": "string",
+            "example": "Local government area"
+          },
+          "city": {
+            "type": "string",
+            "example": "City"
+          },
+          "state": {
+            "type": "string",
+            "example": "State"
+          },
+          "country": {
+            "type": "string",
+            "example": "Country"
+          }
+        },
+        "required": [
+          "estateName",
+          "cac",
+          "address",
+          "lga",
+          "city",
+          "state",
+          "country"
+        ]
+      },
+      "ReasonDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateEstateAdminDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "roleId": {
+            "type": "string",
+            "example": "w12234237863878hhjeg653622"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "roleId"
+        ]
+      },
+      "UpdateEstateAdminRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "Role Id"
+          }
+        },
+        "required": [
+          "roleId"
+        ]
+      },
+      "SignUpDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "propertyId": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "countryCode",
+          "phoneNumber",
+          "email",
+          "propertyId",
+          "startDate",
+          "endDate"
+        ]
+      },
+      "VisitorCodeDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "entryTime": {
+            "type": "string"
+          },
+          "exitTime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "entryTime",
+          "exitTime"
+        ]
+      },
+      "ResidentFixedAssetDto": {
+        "type": "object",
+        "properties": {
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "Duplex",
+              "Apartments",
+              "Shortlet",
+              "Hotel",
+              "SuperMarket",
+              "School",
+              "Hospital",
+              "Church",
+              "Office"
+            ]
+          },
+          "propertyName": {
+            "type": "string",
+            "example": "Ajola House"
+          },
+          "propertyNumber": {
+            "type": "string",
+            "example": "Property Number"
+          },
+          "houseNumber": {
+            "type": "string",
+            "example": "House Number"
+          },
+          "numberOfRooms": {
+            "type": "number",
+            "example": "5"
+          },
+          "floorNumber": {
+            "type": "number",
+            "example": "3"
+          },
+          "numberOfFloors": {
+            "type": "number",
+            "example": "3"
+          },
+          "description": {
+            "type": "string",
+            "example": "A large house of glass"
+          },
+          "address": {
+            "type": "string",
+            "example": "20 Bendel Road Ikoyi"
+          },
+          "street": {
+            "type": "string",
+            "example": "Franklyn"
+          },
+          "city": {
+            "type": "string",
+            "example": "Lagos"
+          },
+          "state": {
+            "type": "string",
+            "example": "Lagos"
+          },
+          "country": {
+            "type": "string",
+            "example": "Nigeria"
+          },
+          "isForRent": {
+            "type": "boolean",
+            "example": "true or false"
+          },
+          "isForSale": {
+            "type": "boolean",
+            "example": "true or false"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/SignUpDto"
+          }
+        },
+        "required": [
+          "propertyType",
+          "propertyName",
+          "propertyNumber",
+          "houseNumber",
+          "numberOfRooms",
+          "floorNumber",
+          "numberOfFloors",
+          "description",
+          "address",
+          "street",
+          "city",
+          "state",
+          "country",
+          "isForRent",
+          "isForSale",
+          "owner"
+        ]
+      },
+      "UpdatePropertyDto": {
+        "type": "object",
+        "properties": {
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "Duplex",
+              "Apartments",
+              "Shortlet",
+              "Hotel",
+              "SuperMarket",
+              "School",
+              "Hospital",
+              "Church",
+              "Office"
+            ]
+          },
+          "propertyName": {
+            "type": "string",
+            "example": "Ajola House"
+          },
+          "propertyNumber": {
+            "type": "string",
+            "example": "Property Number"
+          },
+          "houseNumber": {
+            "type": "string",
+            "example": "House Number"
+          },
+          "numberOfRooms": {
+            "type": "number",
+            "example": 5
+          },
+          "floorNumber": {
+            "type": "number",
+            "example": 3
+          },
+          "numberOfFloors": {
+            "type": "number",
+            "example": 3
+          },
+          "description": {
+            "type": "string",
+            "example": "A large house of glass"
+          },
+          "address": {
+            "type": "string",
+            "example": "20 Bendel Road Ikoyi"
+          },
+          "street": {
+            "type": "string",
+            "example": "Franklyn"
+          },
+          "city": {
+            "type": "string",
+            "example": "Lagos"
+          },
+          "state": {
+            "type": "string",
+            "example": "Lagos"
+          },
+          "country": {
+            "type": "string",
+            "example": "Nigeria"
+          },
+          "isForRent": {
+            "type": "boolean",
+            "example": true
+          },
+          "isForSale": {
+            "type": "boolean",
+            "example": false
+          },
+          "propertyStatus": {
+            "type": "string",
+            "example": {
+              "available": "available",
+              "occupied": "occupied",
+              "unavailable": "unavailable",
+              "reserved": "reserved"
+            }
+          }
+        }
+      },
+      "OnboardPersonnelDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string",
+            "example": {
+              "male": "male",
+              "female": "female",
+              "others": "others"
+            }
+          },
+          "email": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string",
+            "example": {
+              "NIN": "NIN",
+              "PASSPORT": "PASSPORT",
+              "BVN": "BVN",
+              "DRIVER_LICENSE": "DRIVER_LICENSE"
+            }
+          },
+          "documentNumber": {
+            "type": "string",
+            "example": "Ag53898926y"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "phoneNumber",
+          "gender",
+          "email",
+          "documentType",
+          "documentNumber"
+        ]
+      },
+      "AccessCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      }
+    }
+  }
+}
