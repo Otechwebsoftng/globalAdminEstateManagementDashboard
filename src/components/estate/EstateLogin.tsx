@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ShieldCheck, Mail, Lock, ArrowRight, Check, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { User } from "../../context/AuthContext";
+import { homePathFor, type Persona } from "../../config/personas";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../services/api";
 
@@ -12,6 +13,7 @@ interface EstateLoginProps {
 
 export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLoginProps) {
   const auth = useAuth();
+  const [persona, setPersona] = useState<Persona>("GLOBAL_ADMIN");
   const navigate = useNavigate();
   const [authStep, setAuthStep] = useState<"login" | "two-factor" | "reset-password" | "set-new-password">("login");
   const [email, setEmail] = useState("");
@@ -69,7 +71,10 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setIsLoading(true);
 
     try {
-      const response = await authApi.loginGlobalAdmin({ email, password }) as any;
+      const login = persona === "ESTATE_ADMIN"
+        ? authApi.loginEstateAdmin
+        : authApi.loginGlobalAdmin;
+      const response = await login({ email, password }) as any;
       console.log("Login response:", response);
       const mfaToken = response?.token || response?.data?.mfaToken || response?.mfaToken;
       if (mfaToken) {
@@ -120,24 +125,24 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
         const userData: User = {
           id: user.id,
           name: `${user.firstName} ${user.lastName}`,
-          role: user.role?.name || "Global Administrator",
+          role: user.role?.name || (persona === "ESTATE_ADMIN" ? "Estate Administrator" : "Global Administrator"),
           email: user.email,
           // Only the global-admin login path exists today; the estate-admin
           // toggle sets this to ESTATE_ADMIN when it lands.
-          persona: "GLOBAL_ADMIN",
+          persona,
           roleId: user.role?.id,
           permissions: user.role?.permissions?.map((perm: any) => perm.slug),
           estateId: user.estateId ?? user.estate?.id,
         };
         auth.login(userData, accessToken);
         if (onLoginSuccess) onLoginSuccess(userData.name);
-        navigate("/admin/dashboard");
+        navigate(homePathFor(persona), { replace: true });
       } else if (accessToken) {
         auth.login(
-          { id: "admin", name: "Administrator", role: "Global Admin", email, persona: "GLOBAL_ADMIN" },
+          { id: "admin", name: "Administrator", role: "Global Admin", email, persona },
           accessToken,
         );
-        navigate("/admin/dashboard");
+        navigate(homePathFor(persona), { replace: true });
       } else {
         setErrors("OTP verification succeeded but no token received. Check console.");
       }
@@ -250,6 +255,28 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                 <p className="text-xs text-gray-400 mt-1 leading-normal">
                   Enter your credentials to access the central control panel managing access, residents, and security.
                 </p>
+              </div>
+
+              {/* Which portal to sign in to. Drives the login endpoint and
+                  the post-OTP redirect. */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                {([
+                  { key: "GLOBAL_ADMIN", label: "Platform Admin" },
+                  { key: "ESTATE_ADMIN", label: "Estate Admin" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setPersona(opt.key)}
+                    className={`py-2 rounded-lg text-[11px] font-black transition-all ${
+                      persona === opt.key
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">

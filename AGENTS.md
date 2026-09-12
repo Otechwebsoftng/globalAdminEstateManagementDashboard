@@ -34,6 +34,34 @@ No test runner is configured.
 
 ## Backend API
 
+> **The route surface changed.** `/estate` was renamed `/estates`, `/suspend` was
+> dropped on both admin types, and security-personnel, resident-assets and
+> residents endpoints were added. The live OpenAPI spec is the source of truth:
+>
+> ```
+> curl https://estatemanagementapiserver.onrender.com/api/v1-json
+> ```
+>
+> Re-run the audit in `src/services/api.ts` against it before trusting any table
+> below. Swagger UI is at `/api/v1`.
+
+### Current endpoint groups (65 paths)
+
+| Group | Notes |
+|---|---|
+| `auth` | global-admin, estate-admin, resident and security logins; shared `PATCH /auth/admin/verify-user` MFA |
+| `estates` | list/detail/onboard/update, soft-delete, restore, delete, residents, estate-admin lookup |
+| `global-admin`, `estate-admin` | list, onboard, update-role, soft-delete, restore, hard delete, password flows |
+| `residents` | per-estate list, detail, update, remove-assignment, visitor codes, password flows |
+| `security-personnel` | per-estate list/detail/onboard, update-profile, soft-delete, restore, remove, verify-code |
+| `resident-assets` | per-estate properties: list/detail/create/update, soft-delete (reason), restore, delete, remove occupant |
+| `role`, `permission`, `menu` | unchanged |
+
+**Everything under residents, security-personnel and resident-assets is
+estate-scoped.** Use `useEstateScope()` (`src/hooks/useEstateScope.ts`): estate
+admins are pinned to `user.estateId`; global admins pick an estate.
+
+
 Base URL: `VITE_API_BASE_URL` env var (set in `.env`)
 Auth: JWT Bearer token in `Authorization` header
 Token storage: `localStorage` keys `global_estates_token`, `global_estates_user`, `global_estates_mfa_token`
@@ -65,7 +93,7 @@ All API functions are organized by domain:
 
 ### Key Gotchas
 
-- **Residents are per-estate only**: `GET /estate/{id}/residents` — no global residents endpoint
+- **Residents are per-estate only**: `GET /estates/{estateId}/residents`. There is also `GET /residents/estate/{estateId}`
 - **Estate field mapping**: API returns `estateName`, `firstName`, `lastName` → frontend expects `name`, `owner` (mapped in `fetchEstates`)
 - **Admin field mapping**: API returns `firstName`, `lastName`, `role.name` → frontend expects `name`, `role` (mapped in `fetchAdmins`)
 - **OTP types**: `"ADMIN_LOGIN"`, `"SIGN_UP"`, `"CHANGE_PASSWORD"`, `"FORGOT_PASSWORD"`
@@ -77,7 +105,7 @@ All API functions are organized by domain:
 
 ### Admin List Fetching — How It Works and Why
 
-**Problem (solved):** The `GET /global-admin` and `GET /estate-admin` endpoints accept an optional `userStatus` filter (`active`, `inactive`, `inactive`, `suspended`, `flagged`). Without it, the backend may only return `active` users. Newly onboarded admins who haven't verified OTP yet are `invisible`.
+**Problem (solved):** The `GET /global-admin` and `GET /estates-admin` endpoints accept an optional `userStatus` filter (`active`, `inactive`, `inactive`, `suspended`, `flagged`). Without it, the backend may only return `active` users. Newly onboarded admins who haven't verified OTP yet are `invisible`.
 
 **Solution in `GlobalDashboard.tsx` (`fetchAllAdmins`):**
 1. **Primary**: Single unfiltered `globalAdminApi.list()` call — returns all admins regardless of status
@@ -116,9 +144,9 @@ All API functions are organized by domain:
 | Forgot password | `EstateLogin.tsx` | `authApi.forgotPassword` + `verifyPasswordOtp` + `resetPassword` | `PATCH /global-admin/forgot-password`, etc. |
 | Resend OTP | `EstateLogin.tsx` | `authApi.resendOtp()` | `PATCH /global-admin/resend-otp` |
 | Dashboard stats | `fetchDashboard()` | `globalAdminApi.getDashboard()` | `GET /global-admin/dashboard` |
-| Estate list | `fetchEstates()` | `estateApi.list()` | `GET /estate` |
-| Estate onboard | `handleOnboardEstateSubmit` | `estateApi.onboard()` | `POST /estate/onboard-estate` |
-| Estate edit | `handleEditEstateSubmit` | `estateApi.update()` | `PUT /estate/{id}` |
+| Estate list | `fetchEstates()` | `estateApi.list()` | `GET /estates` |
+| Estate onboard | `handleOnboardEstateSubmit` | `estateApi.onboard()` | `POST /estates/onboard-estate` |
+| Estate edit | `handleEditEstateSubmit` | `estateApi.update()` | `PUT /estates/{estateId}` |
 | Admin list | `fetchAllAdmins()` | `globalAdminApi.list()` (unfiltered, fallback: 4 status calls) | `GET /global-admin` |
 | Admin onboard | `handleAddAdminSubmit` | `globalAdminApi.onboard()` | `POST /global-admin/onboard-admin` |
 | Admin suspend | `handleAdminSuspend` | `globalAdminApi.suspend()` | `PATCH /global-admin/{id}/suspend` |
@@ -133,8 +161,8 @@ All API functions are organized by domain:
 | Permissions list | `fetchPermissions()` | `permissionApi.list()` | `GET /permission` |
 | Role permissions checkboxes | Role modal | Select All / Deselect All toggle | Pre-selected on edit |
 | Menu items | `fetchMenu()` | `menuApi.list()` | `GET /menu` |
-| Estate residents (per-estate) | `fetchEstateResidents()` | `estateApi.getResidents()` | `GET /estate/{id}/residents` |
-| Estate admins list | `fetchAllEstateAdmins()` | `estateAdminApi.list()` (4 parallel status calls) | `GET /estate-admin` |
+| Estate residents (per-estate) | `fetchEstateResidents()` | `estateApi.getResidents()` | `GET /estates/{id}/residents` |
+| Estate admins list | `fetchAllEstateAdmins()` | `estateAdminApi.list()` (4 parallel status calls) | `GET /estates-admin` |
 | Estate admin suspend | `handleEstateAdminSuspend` | `estateAdminApi.suspend()` | `PATCH /estate-admin/{id}/suspend` |
 | Estate admin restore | `handleEstateAdminRestore` | `estateAdminApi.restore()` | `PATCH /estate-admin/{id}/restore` |
 | Estate admin soft-delete | `handleEstateAdminDelete` | `estateAdminApi.softDelete()` | `PATCH /estate-admin/{id}/soft-delete` |
@@ -152,7 +180,7 @@ All API functions are organized by domain:
 | `POST /auth/estate-admin/login` | Not wired | No separate estate-admin login UI |
 | `PUT /global-admin/edit-profile` | Not wired | No profile edit UI |
 | `GET /global-admin/{adminId}` | Not wired | Not needed (list endpoint provides data) |
-| `GET /estate/{estateId}` | Not wired | Estate detail uses parent prop |
+| `GET /estates/{estateId}` | Not wired | Estate detail uses parent prop |
 | `POST /menu`, `POST /menu/{id}/child-menu` | Not wired | No menu management UI |
 | `GET /permission/slug` | Not wired | Not needed |
 | `GET /role/{roleId}` | Not wired | Not needed (list provides data) |

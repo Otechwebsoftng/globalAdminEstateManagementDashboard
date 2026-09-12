@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
-import { estateApi, estateAdminApi, roleApi } from "../../services/api";
+import { estateApi, estateAdminApi, roleApi, securityPersonnelApi } from "../../services/api";
 import { queryClient } from "../../lib/queryClient";
 import { qk } from "../../lib/queryKeys";
 import { parseList } from "../../lib/parseList";
@@ -127,18 +127,30 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     )
   ), [residentsList, residentSearchText]);
 
-  const securityStaff = [
-    { id: 1, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
-    { id: 2, name: "Chikwemedu Emmanuel", shift: "Night", gate: "Gate A", status: "Active" },
-    { id: 3, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
-    { id: 4, name: "Chikwemedu Emmanuel", shift: "Morning", gate: "Gate A", status: "Active" },
-  ];
+  // Real: GET /security-personnel/estate/{estateId}
+  const { data: securityRaw } = useQuery({
+    queryKey: ["security", "estate", estate?.id],
+    queryFn: () => securityPersonnelApi.list(estate.id, { pageSize: 200 }),
+    enabled: !!estate?.id,
+    retry: false,
+  });
+
+  const securityStaff = useMemo(() => (
+    parseList(securityRaw, "personnel", "users", "result", "data").map((p: any) => ({
+      id: p?.id ?? p?._id ?? "",
+      name: [p?.firstName, p?.lastName].filter(Boolean).join(" ") || "--",
+      // The API exposes no shift or gate field yet.
+      shift: p?.shift ?? "--",
+      gate: p?.assignedGate ?? "--",
+      status: String(p?.status ?? "active").toLowerCase() === "active" ? "Active" : "Inactive",
+    }))
+  ), [securityRaw]);
 
   const filteredSecurityStaff = useMemo(() => (
     securityStaff.filter((staff) =>
       matchesSearchTerms([staff.name, staff.shift, staff.gate, staff.status], securitySearchText)
     )
-  ), [securitySearchText]);
+  ), [securityStaff, securitySearchText]);
 
   const visitorLogs = [
     { id: 1, name: "Emmanuel", host: "Chikwemedu Emmanuel", entry: "10:00PM, Today", status: "In", officer: `Officer ${adminName}` },

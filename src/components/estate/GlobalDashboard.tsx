@@ -13,6 +13,7 @@ import ActionMenu from "../ActionMenu";
 import OnboardEstateWizard from "../../features/estates/OnboardEstateWizard";
 import SettingsPage from "../../features/settings/SettingsPage";
 import SecurityPersonnelPage from "../../features/security/SecurityPersonnelPage";
+import ResidentsPage from "../../features/residents/ResidentsPage";
 import SecurityPersonnelDetail from "../../features/security/SecurityPersonnelDetail";
 import AssetsPage from "../../features/assets/AssetsPage";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
@@ -1425,190 +1426,20 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           )}
 
           {/* TAB 3: RESIDENTS DIRECTORY */}
+          {/* RESIDENTS — Board 1, wired to GET /residents/estate/{estateId} */}
           {activeMenu === "residents" && (
             selectedResidentId ? (
               <ResidentDetailView
-                resident={residents.find(r => r.id === selectedResidentId)}
+                resident={residents.find((r) => r.id === selectedResidentId)}
                 onBack={() => setSelectedResidentId(null)}
               />
             ) : (
-              <div className="space-y-6 animate-fade-in text-slate-900">
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-950 font-display">
-                      Residents
-                    </h2>
-                    <p className="text-xs text-gray-400 font-bold uppercase tracking-tight">
-                      Manage all residents across estates.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setIsAddResidentModalOpen(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4 stroke-[3]" />
-                      <span>Add Resident</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Filters and Search Bar matched to image */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-150 shadow-sm flex flex-col sm:flex-row gap-4 items-center">
-                  <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search residents..."
-                      value={residentSearchText}
-                      onChange={(e) => setResidentSearchText(e.target.value)}
-                      className="w-full text-sm pl-9 pr-3 py-2 border border-gray-100 rounded-xl bg-slate-50/50 outline-none"
-                    />
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <select
-                      value={activeResidentTabState}
-                      onChange={(e) => setActiveResidentTabState(e.target.value)}
-                      className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600 outline-none"
-                    >
-                      <option value="All">All Estates</option>
-                      {residentEstateOptions.map((estateName) => (
-                        <option key={estateName} value={estateName}>{estateName}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={residentStatusFilter}
-                      onChange={(e) => setResidentStatusFilter(e.target.value)}
-                      className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600 outline-none"
-                    >
-                      <option value="All">All Status</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                      <option value="Suspended">Suspended</option>
-                    </select>
-                    <button
-                      onClick={() => {
-                        setResidentSearchText("");
-                        setActiveResidentTabState("All");
-                        setResidentStatusFilter("All");
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-slate-600"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {/* Residents Table precisely matched to image column structure */}
-                <div className="bg-white rounded-2xl border border-gray-150 shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-100 text-[10px] font-black uppercase text-gray-400 tracking-widest bg-slate-50/30">
-                          <th className="py-4 px-6">Resident Name</th>
-                          <th className="py-4 px-6">Estate</th>
-                          <th className="py-4 px-6">Phone</th>
-                          <th className="py-4 px-6 text-center">Unit</th>
-                          <th className="py-4 px-6">Status</th>
-                          <th className="py-4 px-6">Date Joined</th>
-                          <th className="py-4 px-6 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {filteredResidents.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="py-12 text-center font-bold text-gray-400">
-                              No residents match your search.
-                            </td>
-                          </tr>
-                        ) : filteredResidents.map((res: any) => (
-                          <tr key={res.id} className="hover:bg-slate-50/50 transition-colors group">
-                            <td className="py-4 px-6">
-                              <div
-                                onClick={() => setSelectedResidentId(res.id)}
-                                className="flex items-center gap-3 cursor-pointer group/name w-fit"
-                              >
-                                <div className="h-8 w-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-black text-[10px] border border-blue-100 group-hover/name:bg-blue-600 group-hover/name:text-white transition-all">
-                                  {getResidentInitials(res)}
-                                </div>
-                                <span className="font-black text-slate-900 group-hover/name:text-blue-600 transition-colors">{getResidentName(res)}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 px-6 font-bold text-gray-500">{getResidentEstate(res)}</td>
-                            <td className="py-4 px-6 font-bold text-slate-700 font-mono">{getResidentPhone(res)}</td>
-                            <td className="py-4 px-6 text-center font-black text-blue-600">{res.houseNo?.split(',').pop()?.trim() || "12A"}</td>
-                            <td className="py-4 px-6">
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                                <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" />
-                                {res.status || "Active"}
-                              </span>
-                            </td>
-                            <td className="py-4 px-6 font-bold text-gray-400">{getResidentJoinedDate(res)}</td>
-                            <td className="py-4 px-6 text-right">
-                              <ActionMenu
-                                trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
-                                width="w-44"
-                              >
-                                <button
-                                  onClick={() => setSelectedResidentId(res.id)}
-                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-                                >
-                                  <Eye className="h-3.5 w-3.5 text-blue-600" />
-                                  <span>View Profile</span>
-                                </button>
-                                <button
-                                  onClick={() => { setEditingResident(res); setIsEditResidentModalOpen(true); }}
-                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-                                >
-                                  <Edit className="h-3.5 w-3.5 text-amber-600" />
-                                  <span>Edit Details</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if(window.confirm(`Suspend access for ${getResidentName(res)}?`)) {
-                                      setResidents(residents.map(r => r.id === res.id ? {...r, status: r.status === 'Active' ? 'Suspended' : 'Active'} : r));
-                                    }
-                                  }}
-                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-amber-600 hover:bg-amber-50"
-                                >
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                  <span>{res.status === 'Active' ? 'Suspend Access' : 'Restore Access'}</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if(window.confirm(`Deactivate and remove ${getResidentName(res)} from records?`)) {
-                                      setResidents(residents.filter(r => r.id !== res.id));
-                                    }
-                                  }}
-                                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50 border-t border-gray-50 mt-1"
-                                >
-                                  <UserX className="h-3.5 w-3.5" />
-                                  <span>Deactivate</span>
-                                </button>
-                              </ActionMenu>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Pagination matched to image bottom */}
-                  <div className="p-4 border-t border-gray-50 flex justify-between items-center text-[10px] font-bold text-gray-400">
-                    <span>{filteredResidents.length} of {residents.length} Residents</span>
-                    <div className="flex gap-4">
-                      <button className="hover:text-slate-900 disabled:opacity-30 uppercase tracking-widest">← Previous</button>
-                      <button className="hover:text-slate-900 uppercase tracking-widest">Next →</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ResidentsPage
+                onView={(r) => { setResidents([r]); setSelectedResidentId(r.id); }}
+              />
             )
           )}
 
-          {/* TAB 4: DOMESTIC & STAFF DATABASE - MATCHES IMAGE 2 STATS, TABLES AND DROPDOWNS PERFECTLY */}
           {activeMenu === "staff" && (
             <div className="space-y-6 animate-fade-in text-slate-800">
 

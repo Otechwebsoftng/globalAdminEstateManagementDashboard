@@ -8,6 +8,7 @@ import PublicOnly from "./components/guards/PublicOnly";
 import HomeRedirect from "./components/guards/HomeRedirect";
 import EstateLogin from "./components/estate/EstateLogin";
 import GlobalDashboard from "./components/estate/GlobalDashboard";
+import EstateAdminPortal from "./features/shared/EstateAdminPortal";
 
 /** Wraps the authenticated tree in the session-expiry gate and error boundary. */
 function AuthenticatedShell() {
@@ -59,11 +60,7 @@ export default function AppRoutes() {
             path="/estate/*"
             element={
               <RequireRole allow={["ESTATE_ADMIN"]}>
-                <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                  <span className="text-xs font-bold text-gray-400">
-                    Estate admin portal coming soon.
-                  </span>
-                </div>
+                <EstateAdminPortal />
               </RequireRole>
             }
           />
