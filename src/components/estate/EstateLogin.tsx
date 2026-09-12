@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ShieldCheck, Mail, Lock, ArrowRight, Check, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { User } from "../../context/AuthContext";
 import { homePathFor, type Persona } from "../../config/personas";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../services/api";
+
+const OTP_LEN = 6;
+const emptyOtp = () => Array.from({ length: OTP_LEN }, () => "");
+
+/** Pull digits from clipboard / autofill text (handles "123 456", "code: 123456", etc.). */
+function extractOtpDigits(raw: string, max = OTP_LEN): string {
+  return raw.replace(/\D/g, "").slice(0, max);
+}
 
 interface EstateLoginProps {
   onLoginSuccess?: (adminName: string) => void;
@@ -22,8 +30,11 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   const [isLoading, setIsLoading] = useState(false);
 
   // 2FA state
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const [otp, setOtp] = useState<string[]>(emptyOtp);
   const [countdown, setCountdown] = useState(252);
+  /** Guards against the post-paste `onChange` that would wipe a just-filled OTP. */
+  const otpPasteLock = useRef(false);
+  const resetPasteLock = useRef(false);
   
   // Set New Password state
   const [newPassword, setNewPassword] = useState("");
@@ -32,7 +43,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
 
   // Reset password state
   const [resetEmail, setResetEmail] = useState("");
-  const [resetOtp, setResetOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const [resetOtp, setResetOtp] = useState<string[]>(emptyOtp);
   const [resetStep, setResetStep] = useState<"email" | "otp" | "new-password">("email");
 
   // 2FA Timer Countdown
@@ -91,48 +102,86 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   };
 
   const focusOtp = (index: number) =>
-    document.getElementById(`2fa-otp-${Math.min(Math.max(index, 0), 5)}`)?.focus();
+    document.getElementById(`2fa-otp-${Math.min(Math.max(index, 0), OTP_LEN - 1)}`)?.focus();
 
-  /** Spreads a multi-character value across the boxes, so a paste fills them all. */
-  const fillOtpFrom = (index: number, raw: string) => {
-    const digits = raw.replace(/\D/g, "");
+  const focusResetOtp = (index: number) =>
+    document.getElementById(`reset-otp-${Math.min(Math.max(index, 0), OTP_LEN - 1)}`)?.focus();
+
+  /**
+   * Spread digits across boxes. Full 6-digit pastes always start at box 0 so
+   * pasting into any field (or with leftover digits) still fills the whole OTP.
+   */
+  const applyOtpDigits = (
+    setCodes: React.Dispatch<React.SetStateAction<string[]>>,
+    focus: (i: number) => void,
+    index: number,
+    raw: string,
+  ) => {
+    const digits = extractOtpDigits(raw);
     if (!digits) return;
-    const next = [...otp];
-    for (let i = 0; i < digits.length && index + i < 6; i++) next[index + i] = digits[i];
-    setOtp(next);
-    focusOtp(index + digits.length);
+    const start = digits.length >= OTP_LEN ? 0 : index;
+    setCodes((prev) => {
+      const next = [...prev];
+      for (let i = 0; i < digits.length && start + i < OTP_LEN; i++) next[start + i] = digits[i];
+      return next;
+    });
+    focus(Math.min(start + digits.length, OTP_LEN - 1));
+  };
+
+  const lockPaste = (lock: React.MutableRefObject<boolean>) => {
+    lock.current = true;
+    // Chromium/Safari often fire `change` after paste on a macrotask — keep the
+    // lock long enough that the wipe can't land after we fill the boxes.
+    window.setTimeout(() => { lock.current = false; }, 50);
   };
 
   const handleOtpChange = (index: number, val: string) => {
+    if (otpPasteLock.current) return;
     // Autofill and some keyboards deliver several characters at once.
-    if (val.length > 1) return fillOtpFrom(index, val);
-    const newOtp = [...otp];
-    newOtp[index] = val.replace(/\D/g, "");
-    setOtp(newOtp);
-    if (newOtp[index] && index < 5) focusOtp(index + 1);
+    if (val.length > 1) return applyOtpDigits(setOtp, focusOtp, index, val);
+    const digit = val.replace(/\D/g, "").slice(-1);
+    setOtp((prev) => {
+      const next = [...prev];
+      next[index] = digit;
+      return next;
+    });
+    if (digit && index < OTP_LEN - 1) focusOtp(index + 1);
   };
 
   const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    fillOtpFrom(index, e.clipboardData.getData("text"));
+    lockPaste(otpPasteLock);
+    const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
+    applyOtpDigits(setOtp, focusOtp, index, text);
   };
 
-  /** Same paste-aware fill for the password-reset OTP boxes. */
-  const fillReset = (index: number, raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    if (!digits) return;
-    const next = [...resetOtp];
-    for (let i = 0; i < digits.length && index + i < 6; i++) next[index + i] = digits[i];
-    setResetOtp(next);
-    document.getElementById(`reset-otp-${Math.min(index + digits.length, 5)}`)?.focus();
+  const handleResetOtpChange = (index: number, val: string) => {
+    if (resetPasteLock.current) return;
+    if (val.length > 1) return applyOtpDigits(setResetOtp, focusResetOtp, index, val);
+    const digit = val.replace(/\D/g, "").slice(-1);
+    setResetOtp((prev) => {
+      const next = [...prev];
+      next[index] = digit;
+      return next;
+    });
+    if (digit && index < OTP_LEN - 1) focusResetOtp(index + 1);
+  };
+
+  const handleResetOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    lockPaste(resetPasteLock);
+    const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
+    applyOtpDigits(setResetOtp, focusResetOtp, index, text);
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       e.preventDefault();
-      const next = [...otp];
-      next[index - 1] = "";
-      setOtp(next);
+      setOtp((prev) => {
+        const next = [...prev];
+        next[index - 1] = "";
+        return next;
+      });
       focusOtp(index - 1);
     }
     if (e.key === "ArrowLeft") { e.preventDefault(); focusOtp(index - 1); }
@@ -414,15 +463,27 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                 </p>
               </div>
 
-              {/* Digits row */}
-              <div className="flex gap-2.5 sm:gap-3 justify-center my-6">
+              {/* Digits row — paste on any box fills all six */}
+              <div
+                className="flex gap-2.5 sm:gap-3 justify-center my-6"
+                onPaste={(e) => {
+                  // Catch paste when focus is on the row wrapper (e.g. after tab).
+                  if ((e.target as HTMLElement).tagName === "INPUT") return;
+                  e.preventDefault();
+                  lockPaste(otpPasteLock);
+                  const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
+                  applyOtpDigits(setOtp, focusOtp, 0, text);
+                }}
+              >
                 {otp.map((dig, idx) => (
                   <input
                     key={idx}
                     id={`2fa-otp-${idx}`}
                     type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                     autoComplete={idx === 0 ? "one-time-code" : "off"}
+                    aria-label={`Digit ${idx + 1} of ${OTP_LEN}`}
                     value={dig}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onPaste={(e) => handleOtpPaste(idx, e)}
@@ -566,17 +627,21 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                         id={`reset-otp-${idx}`}
                         type="text"
                         inputMode="numeric"
+                        pattern="[0-9]*"
                         autoComplete={idx === 0 ? "one-time-code" : "off"}
+                        aria-label={`Reset code digit ${idx + 1} of ${OTP_LEN}`}
                         value={dig}
-                        onChange={(e) => fillReset(idx, e.target.value)}
-                        onPaste={(e) => { e.preventDefault(); fillReset(idx, e.clipboardData.getData("text")); }}
+                        onChange={(e) => handleResetOtpChange(idx, e.target.value)}
+                        onPaste={(e) => handleResetOtpPaste(idx, e)}
                         onKeyDown={(e) => {
                           if (e.key === "Backspace" && !resetOtp[idx] && idx > 0) {
                             e.preventDefault();
-                            const next = [...resetOtp];
-                            next[idx - 1] = "";
-                            setResetOtp(next);
-                            document.getElementById(`reset-otp-${idx - 1}`)?.focus();
+                            setResetOtp((prev) => {
+                              const next = [...prev];
+                              next[idx - 1] = "";
+                              return next;
+                            });
+                            focusResetOtp(idx - 1);
                           }
                         }}
                         onFocus={(e) => e.currentTarget.select()}
