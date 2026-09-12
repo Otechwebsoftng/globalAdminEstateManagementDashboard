@@ -13,6 +13,8 @@ import MockBadge from "../../components/ui/MockBadge";
 import AddPropertyWizard from "./AddPropertyWizard";
 import TemporarilyDeleteModal from "./TemporarilyDeleteModal";
 import { useToast } from "../../components/Toast";
+import { useEstateScope } from "../../hooks/useEstateScope";
+import EstateScopeBar from "../shared/EstateScopeBar";
 import { queryClient } from "../../lib/queryClient";
 import { assetApi, ASSETS_IS_MOCK } from "../../services/assetApi";
 import {
@@ -83,6 +85,8 @@ export default function AssetsListPage({
   kind, onView,
 }: { kind: AssetKind; onView?: (p: Property) => void }) {
   const { showToast } = useToast();
+  const scope = useEstateScope();
+  const estateId = scope.estateId ?? "";
   const copy = COPY[kind];
 
   const [page, setPage] = useState(1);
@@ -94,19 +98,21 @@ export default function AssetsListPage({
   const [removing, setRemoving] = useState<Property | null>(null);
 
   const params = useMemo(
-    () => ({ kind, page, pageSize: PAGE_SIZE, search, type, status, availability }),
-    [kind, page, search, type, status, availability],
+    () => ({ kind, estateId, page, pageSize: PAGE_SIZE, search, type, status, availability }),
+    [kind, estateId, page, search, type, status, availability],
   );
 
   const { data, isLoading } = useQuery({
     queryKey: ["assets", "list", params],
     queryFn: () => assetApi.list(params),
+    enabled: !!estateId,
     retry: false,
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["assets", "stats", kind],
-    queryFn: () => assetApi.stats(kind),
+    queryKey: ["assets", "stats", kind, estateId],
+    queryFn: () => assetApi.stats(kind, estateId),
+    enabled: !!estateId,
     retry: false,
   });
 
@@ -118,7 +124,7 @@ export default function AssetsListPage({
   };
 
   const handleAdd = async (dto: CreatePropertyDto) => {
-    await assetApi.create(dto);
+    await assetApi.create(dto, estateId);
     invalidate();
     showToast("Property added", "success");
   };
@@ -126,7 +132,7 @@ export default function AssetsListPage({
   const handleRemove = async (reason: string) => {
     if (!removing) return;
     try {
-      await assetApi.temporarilyRemove(removing.id, reason);
+      await assetApi.temporarilyRemove(removing.id, estateId, reason);
       invalidate();
       showToast("Property temporarily removed", "success");
       setRemoving(null);
@@ -144,6 +150,13 @@ export default function AssetsListPage({
             {ASSETS_IS_MOCK && <MockBadge />}
           </div>
           <p className="text-xs text-gray-400 font-bold tracking-tight">{copy.subtitle}</p>
+          <div className="mt-3">
+            <EstateScopeBar
+              estates={scope.estates} estateId={scope.estateId}
+              onSelect={scope.select} isPinned={scope.isPinned}
+              currentName={scope.current?.name}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -227,7 +240,13 @@ export default function AssetsListPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
+              {!estateId ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center font-bold text-gray-400">
+                    Select an estate to see its properties.
+                  </td>
+                </tr>
+              ) : isLoading ? (
                 <tr><td colSpan={9}><TableSkeleton rows={6} cols={9} /></td></tr>
               ) : rows.length === 0 ? (
                 <tr>

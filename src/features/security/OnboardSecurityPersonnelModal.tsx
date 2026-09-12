@@ -1,18 +1,18 @@
 import { useState } from "react";
-import { User, Mail, Lock, Eye, EyeOff, X, Check, IdCard } from "lucide-react";
+import { User, Mail, X, Check, IdCard, Phone } from "lucide-react";
 import Modal from "../../components/ui/Modal";
 import { FloatingInput } from "../../components/ui/Field";
 import { FloatingSelect } from "../../components/ui/Select";
 import SuccessDialog from "../../components/ui/SuccessDialog";
 import { useToast } from "../../components/Toast";
 import {
-  GATES, gateLabel, IDENTITY_TYPES,
+  DOCUMENT_TYPES, documentTypeLabel, GENDERS, genderLabel,
   type CreateSecurityPersonnelDto,
 } from "../../types/security";
 
 const EMPTY: CreateSecurityPersonnelDto = {
-  firstName: "", lastName: "", email: "", countryCode: "+234", phoneNumber: "",
-  identityType: "", idNumber: "", assignedGate: "", password: "",
+  firstName: "", lastName: "", email: "", phoneNumber: "",
+  gender: "", documentType: "", documentNumber: "",
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,7 +29,6 @@ export default function OnboardSecurityPersonnelModal({
   const { showToast } = useToast();
   const [values, setValues] = useState<CreateSecurityPersonnelDto>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
 
@@ -45,16 +44,14 @@ export default function OnboardSecurityPersonnelModal({
     if (!values.email.trim()) e.email = "Email is required.";
     else if (!EMAIL_RE.test(values.email.trim())) e.email = "Enter a valid email address.";
     if (!values.phoneNumber.trim()) e.phoneNumber = "Phone number is required.";
-    if (!values.identityType) e.identityType = "Select an identity type.";
-    if (!values.idNumber.trim()) e.idNumber = "ID number is required.";
-    if (!values.assignedGate) e.assignedGate = "Select an assigned gate.";
-    if (!values.password) e.password = "Set a password.";
-    else if (values.password.length < 8) e.password = "Use at least 8 characters.";
+    if (!values.gender) e.gender = "Select a gender.";
+    if (!values.documentType) e.documentType = "Select a document type.";
+    if (!values.documentNumber.trim()) e.documentNumber = "Document number is required.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const reset = () => { setValues(EMPTY); setErrors({}); setShowPassword(false); };
+  const reset = () => { setValues(EMPTY); setErrors({}); };
   const closeAll = () => { reset(); setSucceeded(false); onClose(); };
 
   const submit = async () => {
@@ -92,57 +89,35 @@ export default function OnboardSecurityPersonnelModal({
               value={values.email} error={errors.email}
               onChange={(e) => set("email", e.target.value)}
             />
-            <div className="grid grid-cols-[92px_1fr] gap-3">
+            <FloatingInput
+              label="Phone Number" placeholder="803 - 555 - 0007"
+              leading={<Phone className="h-3.5 w-3.5" />}
+              value={values.phoneNumber} error={errors.phoneNumber}
+              onChange={(e) => set("phoneNumber", e.target.value)}
+            />
+
+            <FloatingSelect
+              label="Gender" placeholder="Select gender..."
+              value={values.gender} error={errors.gender}
+              options={GENDERS.map((g) => ({ value: g, label: genderLabel(g) }))}
+              onChange={(v) => set("gender", v as CreateSecurityPersonnelDto["gender"])}
+            />
+            <FloatingSelect
+              label="Document Type" placeholder="Select document type..."
+              value={values.documentType} error={errors.documentType}
+              options={DOCUMENT_TYPES.map((t) => ({ value: t, label: documentTypeLabel(t) }))}
+              onChange={(v) => set("documentType", v as CreateSecurityPersonnelDto["documentType"])}
+            />
+
+            <div className="sm:col-span-2">
               <FloatingInput
-                label="Code" placeholder="+234"
-                value={values.countryCode}
-                onChange={(e) => set("countryCode", e.target.value)}
-              />
-              <FloatingInput
-                label="Phone Number" placeholder="803 - 555 - 0007"
-                value={values.phoneNumber} error={errors.phoneNumber}
-                onChange={(e) => set("phoneNumber", e.target.value)}
+                label="Document Number" placeholder="Enter document number"
+                leading={<IdCard className="h-3.5 w-3.5" />}
+                value={values.documentNumber} error={errors.documentNumber}
+                disabled={!values.documentType}
+                onChange={(e) => set("documentNumber", e.target.value)}
               />
             </div>
-
-            <FloatingSelect
-              label="Identity Type" placeholder="Select identity type..."
-              value={values.identityType} error={errors.identityType}
-              options={IDENTITY_TYPES.map((t) => ({ value: t, label: t }))}
-              onChange={(v) => set("identityType", v as CreateSecurityPersonnelDto["identityType"])}
-            />
-            <FloatingInput
-              label="ID Number" placeholder="Enter ID number"
-              leading={<IdCard className="h-3.5 w-3.5" />}
-              value={values.idNumber} error={errors.idNumber}
-              disabled={!values.identityType}
-              onChange={(e) => set("idNumber", e.target.value)}
-            />
-
-            <FloatingSelect
-              label="Assigned Gate" placeholder="Select gate..."
-              value={values.assignedGate} error={errors.assignedGate}
-              options={GATES.map((g) => ({ value: g, label: gateLabel(g) }))}
-              onChange={(v) => set("assignedGate", v as CreateSecurityPersonnelDto["assignedGate"])}
-            />
-            <FloatingInput
-              label="Setup Password"
-              type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
-              leading={<Lock className="h-3.5 w-3.5" />}
-              value={values.password} error={errors.password}
-              onChange={(e) => set("password", e.target.value)}
-              trailing={
-                <button
-                  type="button"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="text-gray-400 hover:text-slate-700 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              }
-            />
           </div>
 
           <div className="flex items-center justify-between gap-3 pt-1">

@@ -34,14 +34,14 @@ function Row({
 }
 
 export default function PropertyDetail({
-  propertyId, kind, onBack,
-}: { propertyId: string; kind: AssetKind; onBack: () => void }) {
+  propertyId, estateId, kind, onBack,
+}: { propertyId: string; estateId: string; kind: AssetKind; onBack: () => void }) {
   const { showToast } = useToast();
   const [isRemoving, setIsRemoving] = useState(false);
 
   const { data: p, isLoading } = useQuery({
-    queryKey: ["assets", "detail", propertyId],
-    queryFn: () => assetApi.getById(propertyId),
+    queryKey: ["assets", "detail", propertyId, estateId],
+    queryFn: () => assetApi.getById(propertyId, estateId),
     retry: false,
   });
 
@@ -56,7 +56,7 @@ export default function PropertyDetail({
   }
 
   const handleRemove = async (reason: string) => {
-    await assetApi.temporarilyRemove(p.id, reason);
+    await assetApi.temporarilyRemove(p.id, estateId, reason);
     queryClient.invalidateQueries({ queryKey: ["assets"] });
     showToast("Property temporarily removed", "success");
   };

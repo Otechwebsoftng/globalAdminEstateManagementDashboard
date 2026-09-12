@@ -145,6 +145,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
   // Selected security personnel for the detail view.
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
+  const [selectedPersonnelEstateId, setSelectedPersonnelEstateId] = useState<string>("");
 
   // Row Action Menu State
 
@@ -2164,10 +2165,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
             selectedPersonnelId ? (
               <SecurityPersonnelDetail
                 personnelId={selectedPersonnelId}
+                estateId={selectedPersonnelEstateId}
                 onBack={() => setSelectedPersonnelId(null)}
               />
             ) : (
-              <SecurityPersonnelPage onView={(p) => setSelectedPersonnelId(p.id)} />
+              <SecurityPersonnelPage
+                onView={(p) => { setSelectedPersonnelEstateId(p.estateId); setSelectedPersonnelId(p.id); }}
+              />
             )
           )}
 

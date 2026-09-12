@@ -5,7 +5,7 @@ import type {
 } from "../../types/asset";
 import type { ListParams, Paged } from "../../types/common";
 
-const TYPES: PropertyType[] = ["DUPLEX", "DUPLEX", "APARTMENTS", "SCHOOL", "DUPLEX", "APARTMENTS", "APARTMENTS", "OFFICE", "SCHOOL", "DUPLEX", "SHORTLET", "HOSPITAL"];
+const TYPES: PropertyType[] = ["Duplex", "Duplex", "Apartments", "School", "Duplex", "Apartments", "Apartments", "Office", "School", "Duplex", "Shortlet", "Hospital"];
 const AVAIL: Availability[] = ["FOR_RENT", "FOR_RENT", "FOR_SALE", "FOR_SALE", "FOR_SALE", "FOR_RENT", "FOR_SALE", "OCCUPIED", "NONE", "FOR_RENT", "FOR_RENT", "FOR_SALE"];
 const STREETS = ["Franklyn Str", "Road 2", "Jacob Str", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Franklyn", "Marina Rd", "Awolowo Rd"];
 
@@ -13,6 +13,7 @@ const make = (kind: AssetKind, i: number): Property => ({
   id: `${kind}-${i + 1}`,
   kind,
   propertyName: "Abayomi Williams",
+  propertyNumber: `P-${100 + i}`,
   propertyType: TYPES[i % TYPES.length],
   houseNumber: "4",
   floorNumber: i % 3 === 0 ? "1" : "4",
@@ -22,6 +23,7 @@ const make = (kind: AssetKind, i: number): Property => ({
     "Worem ipsum dolor sit amet, consectetur adipiscing elit. Etiam eu turpis molestie, dictum est a, mattis tellus. Sed dignissim, metus nec fringilla accumsan, risus sem sollicitudin lacus, ut interdum tellus elit sed risus.",
   images: [],
   address: STREETS[i % STREETS.length],
+  street: STREETS[i % STREETS.length],
   city: "Lagos",
   state: "Lagos State",
   country: "Nigeria",
@@ -94,14 +96,15 @@ export const assetsMockApi = {
       id: `${dto.kind}-${Date.now()}`,
       kind: dto.kind,
       propertyName: dto.propertyName,
-      propertyType: (dto.propertyType || "DUPLEX") as PropertyType,
+      propertyNumber: dto.propertyNumber,
+      propertyType: (dto.propertyType || "Duplex") as PropertyType,
       houseNumber: dto.houseNumber,
       floorNumber: dto.floorNumber,
       noOfRooms: Number(dto.noOfRooms) || 0,
       totalNoOfFloors: Number(dto.totalNoOfFloors) || 0,
       description: dto.description,
       images: dto.images,
-      address: dto.address, city: dto.city, state: dto.state, country: dto.country,
+      address: dto.address, street: dto.street, city: dto.city, state: dto.state, country: dto.country,
       contactFirstName: dto.contactFirstName, contactLastName: dto.contactLastName,
       contactEmail: dto.contactEmail, contactCountryCode: dto.contactCountryCode,
       contactPhone: dto.contactPhone,

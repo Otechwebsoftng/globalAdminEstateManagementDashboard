@@ -31,13 +31,13 @@ function Stat({
 }
 
 export default function SecurityPersonnelDetail({
-  personnelId, onBack,
-}: { personnelId: string; onBack: () => void }) {
+  personnelId, estateId, onBack,
+}: { personnelId: string; estateId: string; onBack: () => void }) {
   const { showToast } = useToast();
 
   const { data: p, isLoading } = useQuery({
-    queryKey: ["security", "detail", personnelId],
-    queryFn: () => securityApi.getById(personnelId),
+    queryKey: ["security", "detail", personnelId, estateId],
+    queryFn: () => securityApi.getById(personnelId, estateId),
     retry: false,
   });
 
@@ -56,7 +56,7 @@ export default function SecurityPersonnelDetail({
   const toggleSuspend = async () => {
     const next = p.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     try {
-      await securityApi.setStatus(p.id, next);
+      await securityApi.setStatus(p.id, next, estateId);
       queryClient.invalidateQueries({ queryKey: ["security"] });
       showToast(next === "SUSPENDED" ? "Personnel suspended" : "Personnel restored", "success");
     } catch (err: any) {
@@ -181,7 +181,7 @@ export default function SecurityPersonnelDetail({
               {[
                 { label: "Assigned Gate", value: gateLabel(p.assignedGate), pill: true },
                 { label: "Shift", value: shiftLabel(p.shift) },
-                { label: "Identity", value: `${p.identityType} · ${p.idNumber}` },
+                { label: "Identity", value: `${p.documentType} · ${p.documentNumber}` },
                 { label: "Date Added", value: p.dateAdded },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 py-3 border-b border-white/15 last:border-0">

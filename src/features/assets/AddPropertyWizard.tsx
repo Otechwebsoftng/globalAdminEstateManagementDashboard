@@ -15,11 +15,12 @@ import {
 type Values = Omit<CreatePropertyDto, "kind">;
 
 const EMPTY: Values = {
-  propertyType: "", propertyName: "", houseNumber: "", floorNumber: "",
+  propertyType: "", propertyName: "", propertyNumber: "", houseNumber: "", floorNumber: "",
   noOfRooms: "", totalNoOfFloors: "", description: "", images: [],
-  address: "", city: "", state: "", country: "",
+  address: "", street: "", city: "", state: "", country: "",
   contactFirstName: "", contactLastName: "", contactEmail: "",
   contactCountryCode: "+234", contactPhone: "",
+  startDate: "", endDate: "",
   forRent: false, forSale: false,
 };
 
@@ -35,6 +36,7 @@ const STEPS: WizardStep<Values>[] = [
       const e: any = {};
       if (!v.propertyType) e.propertyType = "Select a property type.";
       if (!v.propertyName.trim()) e.propertyName = "Property name is required.";
+      if (!v.propertyNumber.trim()) e.propertyNumber = "Property number is required.";
       if (!v.houseNumber.trim()) e.houseNumber = "House number is required.";
       if (!v.floorNumber.trim()) e.floorNumber = "Floor number is required.";
       if (!v.noOfRooms.trim()) e.noOfRooms = "Number of rooms is required.";
@@ -48,6 +50,7 @@ const STEPS: WizardStep<Values>[] = [
     validate: (v) => {
       const e: any = {};
       if (!v.address.trim()) e.address = "Address is required.";
+      if (!v.street.trim()) e.street = "Street is required.";
       if (!v.city.trim()) e.city = "City is required.";
       if (!v.state.trim()) e.state = "State is required.";
       if (!v.country.trim()) e.country = "Select a country.";
@@ -64,6 +67,9 @@ const STEPS: WizardStep<Values>[] = [
       if (!v.contactEmail.trim()) e.contactEmail = "Email is required.";
       else if (!EMAIL_RE.test(v.contactEmail.trim())) e.contactEmail = "Enter a valid email address.";
       if (!v.contactPhone.trim()) e.contactPhone = "Phone number is required.";
+      if (!v.startDate) e.startDate = "Start date is required.";
+      if (!v.endDate) e.endDate = "End date is required.";
+      else if (v.startDate && v.endDate < v.startDate) e.endDate = "End date must be after the start date.";
       if (!v.forRent && !v.forSale) e.forRent = "Choose at least one availability status.";
       return e;
     },
@@ -143,6 +149,11 @@ export default function AddPropertyWizard({
             leading={<Home className="h-3.5 w-3.5" />}
             value={values.propertyName} error={errors.propertyName}
             onChange={(e) => setValue("propertyName", e.target.value)}
+          />
+          <FloatingInput
+            label="Property Number" placeholder="Enter property number"
+            value={values.propertyNumber} error={errors.propertyNumber}
+            onChange={(e) => setValue("propertyNumber", e.target.value)}
           />
           <FloatingInput
             label="House Number" placeholder="Enter house number"
@@ -238,6 +249,12 @@ export default function AddPropertyWizard({
             onChange={(e) => setValue("address", e.target.value)}
           />
           <FloatingInput
+            label="Street" placeholder="Enter street"
+            leading={<MapPin className="h-3.5 w-3.5" />}
+            value={values.street} error={errors.street}
+            onChange={(e) => setValue("street", e.target.value)}
+          />
+          <FloatingInput
             label="City" placeholder="Enter city"
             leading={<MapPin className="h-3.5 w-3.5" />}
             value={values.city} error={errors.city}
@@ -291,6 +308,19 @@ export default function AddPropertyWizard({
               onChange={(e) => setValue("contactPhone", e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
+          <FloatingInput
+            label="Tenancy Start" type="date"
+            value={values.startDate} error={errors.startDate}
+            onChange={(e) => setValue("startDate", e.target.value)}
+          />
+          <FloatingInput
+            label="Tenancy End" type="date"
+            value={values.endDate} error={errors.endDate}
+            onChange={(e) => setValue("endDate", e.target.value)}
+          />
         </div>
 
         <div className="relative">

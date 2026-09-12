@@ -3,18 +3,18 @@ import type { EntityStatus } from "./common";
 /** Fixed = land and buildings. Mobile = vehicles and movable assets. */
 export type AssetKind = "fixed" | "mobile";
 
+/**
+ * The exact values ResidentFixedAssetDto.propertyType accepts — sent verbatim,
+ * so no mapping layer can drift. The design showed six of these; the API has nine.
+ */
 export type PropertyType =
-  | "DUPLEX" | "APARTMENTS" | "SHORTLET" | "SUPERMARKET" | "SCHOOL" | "HOSPITAL" | "OFFICE";
-// Order matches the Add Property dropdown in the design. Office is kept because
-// the property table shows existing rows of that type.
+  | "Duplex" | "Apartments" | "Shortlet" | "Hotel" | "SuperMarket"
+  | "School" | "Hospital" | "Church" | "Office";
 export const PROPERTY_TYPES: PropertyType[] = [
-  "DUPLEX", "APARTMENTS", "SHORTLET", "SUPERMARKET", "SCHOOL", "HOSPITAL", "OFFICE",
+  "Duplex", "Apartments", "Shortlet", "Hotel", "SuperMarket",
+  "School", "Hospital", "Church", "Office",
 ];
-export const propertyTypeLabel = (t: PropertyType) =>
-  ({
-    DUPLEX: "Duplex", APARTMENTS: "Apartments", SHORTLET: "Shortlet",
-    SUPERMARKET: "Supermarket", SCHOOL: "School", HOSPITAL: "Hospital", OFFICE: "Office",
-  }[t]);
+export const propertyTypeLabel = (t: PropertyType) => (t === "SuperMarket" ? "Supermarket" : t);
 
 export type Availability = "FOR_RENT" | "FOR_SALE" | "OCCUPIED" | "NONE";
 export const availabilityLabel = (a: Availability) =>
@@ -35,6 +35,7 @@ export interface Property {
   id: string;
   kind: AssetKind;
   propertyName: string;
+  propertyNumber: string;
   propertyType: PropertyType;
   houseNumber: string;
   floorNumber: string;
@@ -44,6 +45,7 @@ export interface Property {
   images: PropertyImage[];
 
   address: string;
+  street: string;
   city: string;
   state: string;
   country: string;
@@ -73,6 +75,7 @@ export interface Property {
 export interface PropertyDetailsStep {
   propertyType: PropertyType | "";
   propertyName: string;
+  propertyNumber: string;
   houseNumber: string;
   floorNumber: string;
   noOfRooms: string;
@@ -84,18 +87,25 @@ export interface PropertyDetailsStep {
 /** Step 2 — Property Location */
 export interface PropertyLocationStep {
   address: string;
+  street: string;
   city: string;
   state: string;
   country: string;
 }
 
 /** Step 3 — Property Contact & Availability */
+/**
+ * Step 3 fills ResidentFixedAssetDto.owner (a SignUpDto), which also requires a
+ * tenancy window. startDate/endDate are not in the mockup but the API demands them.
+ */
 export interface PropertyContactStep {
   contactFirstName: string;
   contactLastName: string;
   contactEmail: string;
   contactCountryCode: string;
   contactPhone: string;
+  startDate: string;
+  endDate: string;
   forRent: boolean;
   forSale: boolean;
 }

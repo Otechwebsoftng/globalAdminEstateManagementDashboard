@@ -11,6 +11,8 @@ import Badge from "../../components/ui/Badge";
 import MockBadge from "../../components/ui/MockBadge";
 import OnboardSecurityPersonnelModal from "./OnboardSecurityPersonnelModal";
 import { useToast } from "../../components/Toast";
+import { useEstateScope } from "../../hooks/useEstateScope";
+import EstateScopeBar from "../shared/EstateScopeBar";
 import { queryClient } from "../../lib/queryClient";
 import { securityApi, SECURITY_IS_MOCK } from "../../services/securityApi";
 import { SHIFTS, shiftLabel, gateLabel, type SecurityPersonnel } from "../../types/security";
@@ -63,6 +65,8 @@ export default function SecurityPersonnelPage({
   onView,
 }: { onView?: (p: SecurityPersonnel) => void }) {
   const { showToast } = useToast();
+  const scope = useEstateScope();
+  const estateId = scope.estateId ?? "";
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
@@ -70,19 +74,21 @@ export default function SecurityPersonnelPage({
   const [isOnboardOpen, setIsOnboardOpen] = useState(false);
 
   const params = useMemo(
-    () => ({ page, pageSize: PAGE_SIZE, search, status, shift }),
-    [page, search, status, shift],
+    () => ({ estateId, page, pageSize: PAGE_SIZE, search, status, shift }),
+    [estateId, page, search, status, shift],
   );
 
   const { data, isLoading } = useQuery({
     queryKey: ["security", "list", params],
     queryFn: () => securityApi.list(params),
-    retry: false, // mock-backed: a thrown error should surface, not retry 3x
+    enabled: !!estateId,
+    retry: false, // a thrown error should surface, not retry 3x
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["security", "stats"],
-    queryFn: () => securityApi.stats(),
+    queryKey: ["security", "stats", estateId],
+    queryFn: () => securityApi.stats(estateId),
+    enabled: !!estateId,
     retry: false,
   });
 
@@ -95,7 +101,7 @@ export default function SecurityPersonnelPage({
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["security"] });
 
   const handleOnboard = async (dto: CreateSecurityPersonnelDto) => {
-    await securityApi.create(dto);
+    await securityApi.create(dto, estateId);
     invalidate();
     showToast("Invitation sent", "success");
   };
@@ -103,7 +109,7 @@ export default function SecurityPersonnelPage({
   const toggleSuspend = async (p: SecurityPersonnel) => {
     const next = p.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     try {
-      await securityApi.setStatus(p.id, next);
+      await securityApi.setStatus(p.id, next, estateId);
       invalidate();
       showToast(next === "SUSPENDED" ? "Personnel suspended" : "Personnel restored", "success");
     } catch (err: any) {
@@ -122,6 +128,13 @@ export default function SecurityPersonnelPage({
           <p className="text-xs text-gray-400 font-bold tracking-tight">
             Monitor security personnel across estates
           </p>
+          <div className="mt-3">
+            <EstateScopeBar
+              estates={scope.estates} estateId={scope.estateId}
+              onSelect={scope.select} isPinned={scope.isPinned}
+              currentName={scope.current?.name}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -202,7 +215,13 @@ export default function SecurityPersonnelPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
+              {!estateId ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center font-bold text-gray-400">
+                    Select an estate to see its security personnel.
+                  </td>
+                </tr>
+              ) : isLoading ? (
                 <tr><td colSpan={7}><TableSkeleton rows={6} cols={7} /></td></tr>
               ) : rows.length === 0 ? (
                 <tr>
