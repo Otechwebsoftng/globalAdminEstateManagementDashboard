@@ -9,3 +9,4 @@ coverage/
 
 # vim swap files
 *.sw[a-p]
+package-lock.json
