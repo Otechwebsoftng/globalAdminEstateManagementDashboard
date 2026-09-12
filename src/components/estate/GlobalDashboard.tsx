@@ -257,6 +257,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     if (raw.length === 0) return [];
     return raw.map((e: any) => ({
       ...e,
+      id: e.id ?? e._id ?? "",
       name: e.estateName || e.name || "",
       owner: `${e.firstName || ""} ${e.lastName || ""}`.trim(),
       phone: `${e.countryCode || ""}${e.phoneNumber || ""}`,

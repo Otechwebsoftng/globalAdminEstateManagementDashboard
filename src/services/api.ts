@@ -264,9 +264,10 @@ export const estateAdminApi = {
     });
   },
 
-  softDelete(adminId: string) {
+  softDelete(adminId: string, reason: string) {
     return request<{ success: boolean; message: string }>(`/estate-admin/${adminId}/soft-delete`, {
       method: "PATCH",
+      body: JSON.stringify({ reason }),
     });
   },
 
@@ -277,9 +278,10 @@ export const estateAdminApi = {
   },
 
   /** See the note on globalAdminApi.suspend — there is no /suspend route. */
-  suspend(adminId: string) {
+  suspend(adminId: string, reason: string) {
     return request<{ success: boolean; message: string }>(`/estate-admin/${adminId}/soft-delete`, {
       method: "PATCH",
+      body: JSON.stringify({ reason }),
     });
   },
 

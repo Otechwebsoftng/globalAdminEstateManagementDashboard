@@ -44,6 +44,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const { showToast } = useToast();
   const confirm = useConfirm();
   const adminName = auth.user?.name || "Administrator";
+  const estateId = String(estate?.id ?? estate?._id ?? "");
   const [activeTab, setActiveTab] = useState<"overview" | "residents" | "security" | "visitors" | "admins">("overview");
   const [residentSearchText, setResidentSearchText] = useState("");
   const [securitySearchText, setSecuritySearchText] = useState("");
@@ -53,22 +54,24 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const [isOnboardAdminModalOpen, setIsOnboardAdminModalOpen] = useState(false);
   const [newEstateAdmin, setNewEstateAdmin] = useState({ firstName: "", lastName: "", email: "", roleId: "" });
+  const [isSuspending, setIsSuspending] = useState(false);
+  const [adminReasonAction, setAdminReasonAction] = useState<null | { type: "suspend" | "delete"; adminId: string }>(null);
 
 
 
 
 
   const { data: residentsRaw, isLoading: isResidentsLoading } = useQuery({
-    queryKey: qk.estateResidents(estate?.id),
-    queryFn: () => estateApi.getResidents(estate.id),
-    enabled: !!estate?.id,
+    queryKey: qk.estateResidents(estateId),
+    queryFn: () => estateApi.getResidents(estateId),
+    enabled: !!estateId,
   });
 
   // GET /estate/{estateId} returns real resident/staff/admin counts.
   const { data: estateDetailRaw } = useQuery({
-    queryKey: qk.estate(estate?.id ?? ""),
-    queryFn: () => estateApi.getById(estate.id),
-    enabled: !!estate?.id,
+    queryKey: qk.estate(estateId),
+    queryFn: () => estateApi.getById(estateId),
+    enabled: !!estateId,
   });
 
   const counts = useMemo(() => {
@@ -89,15 +92,15 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   }, [estateDetailRaw]);
 
   const fetchAllEstateAdmins = async () => {
-    if (!estate?.id) return [];
+    if (!estateId) return [];
     return fetchAdminsByStatus(estateAdminApi, ["admins", "result"]);
   };
 
 
   const { data: estateAdminsRaw, isLoading: isEstateAdminsLoading } = useQuery({
-    queryKey: qk.estateAdmins(estate?.id),
+    queryKey: qk.estateAdmins(estateId),
     queryFn: fetchAllEstateAdmins,
-    enabled: !!estate?.id,
+    enabled: !!estateId,
   });
 
   const { data: rolesRaw } = useQuery({
@@ -108,10 +111,10 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const residentsList: Resident[] = useMemo(() => parseList(residentsRaw, "residents", "result"), [residentsRaw]);
   const estateAdminsList: Admin[] = useMemo(() => {
     const raw = Array.isArray(estateAdminsRaw) ? estateAdminsRaw : parseList(estateAdminsRaw, "admins", "result");
-    if (!estate?.id) return raw;
-    const estateSpecific = raw.filter((a: any) => a.estateId === estate.id);
+    if (!estateId) return raw;
+    const estateSpecific = raw.filter((a: any) => a.estateId === estateId);
     return estateSpecific.length ? estateSpecific : raw;
-  }, [estateAdminsRaw, estate?.id]);
+  }, [estateAdminsRaw, estateId]);
   const rolesList: Role[] = useMemo(() => parseList(rolesRaw, "roles", "result"), [rolesRaw]);
 
   const filteredResidentsList = useMemo(() => (
@@ -132,9 +135,9 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   // Real: GET /security-personnel/estate/{estateId}
   const { data: securityRaw } = useQuery({
-    queryKey: ["security", "estate", estate?.id],
-    queryFn: () => securityPersonnelApi.list(estate.id, { pageSize: 200 }),
-    enabled: !!estate?.id,
+    queryKey: ["security", "estate", estateId],
+    queryFn: () => securityPersonnelApi.list(estateId, { pageSize: 200 }),
+    enabled: !!estateId,
     retry: false,
   });
 
@@ -182,35 +185,40 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     )
   ), [estateAdminsList, estateAdminSearchText]);
 
-  const handleEstateAdminSuspend = async (adminId: string) => {
-    if (!window.confirm("Suspend this estate admin?")) return;
-    try {
-      await estateAdminApi.suspend(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
-      showToast("Estate admin suspended");
-    } catch (err: any) {
-      showToast(err.message || "Failed to suspend estate admin");
-    }
+  const handleEstateAdminSuspend = (adminId: string) => {
+    setAdminReasonAction({ type: "suspend", adminId });
   };
 
   const handleEstateAdminRestore = async (adminId: string) => {
     try {
       await estateAdminApi.restore(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estateId) });
       showToast("Estate admin restored");
     } catch (err: any) {
       showToast(err.message || "Failed to restore estate admin");
     }
   };
 
-  const handleEstateAdminDelete = async (adminId: string) => {
-    if (!window.confirm("Delete this estate admin? This cannot be undone.")) return;
+  const handleEstateAdminDelete = (adminId: string) => {
+    setAdminReasonAction({ type: "delete", adminId });
+  };
+
+  const handleEstateAdminReasonConfirm = async (reason: string) => {
+    if (!adminReasonAction) return;
+    const { type, adminId } = adminReasonAction;
     try {
-      await estateAdminApi.softDelete(adminId);
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
-      showToast("Estate admin deleted");
+      if (type === "suspend") {
+        await estateAdminApi.suspend(adminId, reason);
+        showToast("Estate admin suspended");
+      } else {
+        await estateAdminApi.softDelete(adminId, reason);
+        showToast("Estate admin deleted");
+      }
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estateId) });
+      setAdminReasonAction(null);
     } catch (err: any) {
-      showToast(err.message || "Failed to delete estate admin");
+      showToast(err.message || `Failed to ${type} estate admin`);
+      throw err;
     }
   };
 
@@ -224,7 +232,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         email: newEstateAdmin.email,
         roleId: newEstateAdmin.roleId,
       });
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estateId) });
       showToast("Estate admin onboarded successfully");
       setIsOnboardAdminModalOpen(false);
       setNewEstateAdmin({ firstName: "", lastName: "", email: "", roleId: "" });
@@ -236,7 +244,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   const handleEstateAdminUpdateRole = async (adminId: string, roleId: string) => {
     try {
       await estateAdminApi.updateRole(adminId, { roleId });
-      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estateId) });
       showToast("Estate admin role updated");
     } catch (err: any) {
       showToast(err.message || "Failed to update estate admin role");
@@ -256,6 +264,9 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     if (err?.status === 409) {
       return `This estate cannot be ${verb === "suspend" ? "suspended" : "deleted"} in its current state.`;
     }
+    if (err?.status === 400) {
+      return err?.message || `A reason is required to ${verb} this estate.`;
+    }
     return err?.message || "The action could not be completed.";
   };
 
@@ -264,31 +275,37 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     action: () => Promise<unknown>,
     confirmOpts: Parameters<typeof confirm>[0],
     success: string,
+    verb: string,
     goBack = false,
   ) => {
-    if (!estate?.id) return;
+    if (!estateId) {
+      showToast("Missing estate id — refresh and try again.");
+      return;
+    }
     if (!(await confirm(confirmOpts))) return;
     try {
       await action();
       queryClient.invalidateQueries({ queryKey: qk.estates() });
-      queryClient.invalidateQueries({ queryKey: qk.estate(estate.id) });
+      queryClient.invalidateQueries({ queryKey: qk.estate(estateId) });
       showToast(success, "success");
       if (goBack) onBack();
     } catch (err: any) {
-      showToast(estateActionError(err, "complete"));
+      showToast(estateActionError(err, verb));
     }
   };
 
-  const [isSuspending, setIsSuspending] = useState(false);
-
   const handleEstateSuspendConfirmed = async (reason: string) => {
-    if (!estate?.id) return;
+    if (!estateId) {
+      showToast("Missing estate id — refresh and try again.");
+      return;
+    }
     try {
-      await estateApi.softDelete(estate.id, reason);
+      await estateApi.softDelete(estateId, reason);
       queryClient.invalidateQueries({ queryKey: qk.estates() });
-      queryClient.invalidateQueries({ queryKey: qk.estate(estate.id) });
+      queryClient.invalidateQueries({ queryKey: qk.estate(estateId) });
       showToast("Estate suspended", "success");
       setIsSuspending(false);
+      onBack();
     } catch (err: any) {
       showToast(estateActionError(err, "suspend"));
       throw err;
@@ -296,15 +313,22 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
   };
 
   const handleEstateRestore = () => runEstateAction(
-    () => estateApi.restore(estate.id),
+    () => estateApi.restore(estateId),
     { title: "Restore this estate?", description: "It will appear in active listings again.", confirmLabel: "Restore" },
     "Estate restored",
+    "restore",
   );
 
   const handleEstateDelete = () => runEstateAction(
-    () => estateApi.remove(estate.id),
-    { title: "Delete this estate permanently?", description: "This cannot be undone, and only the estate's contact admin is allowed to do it.", confirmLabel: "Delete", tone: "danger" },
+    () => estateApi.remove(estateId),
+    {
+      title: "Delete this estate permanently?",
+      description: "This cannot be undone. Only the estate's contact admin can delete it. If the estate is still active, suspend it first.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    },
     "Estate deleted",
+    "delete",
     true,
   );
 
@@ -929,6 +953,20 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
         description={`${estate?.name ?? "This estate"} will be hidden from active listings. The backend requires a reason. You can restore it afterwards.`}
         confirmLabel="Suspend Estate"
         tone="warning"
+      />
+
+      <ReasonDialog
+        open={!!adminReasonAction}
+        onClose={() => setAdminReasonAction(null)}
+        onConfirm={handleEstateAdminReasonConfirm}
+        title={adminReasonAction?.type === "delete" ? "Delete this estate admin?" : "Suspend this estate admin?"}
+        description={
+          adminReasonAction?.type === "delete"
+            ? "This soft-deletes the admin. The backend requires a reason."
+            : "This deactivates the admin until restored. The backend requires a reason."
+        }
+        confirmLabel={adminReasonAction?.type === "delete" ? "Delete Admin" : "Suspend Admin"}
+        tone={adminReasonAction?.type === "delete" ? "danger" : "warning"}
       />
 
       {/* Active Tab View */}
