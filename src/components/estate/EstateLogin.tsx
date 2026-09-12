@@ -90,15 +90,53 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     }
   };
 
-  const handleOtpChange = (index: number, val: string) => {
-    const newOtp = [...otp];
-    newOtp[index] = val.substring(val.length - 1);
-    setOtp(newOtp);
+  const focusOtp = (index: number) =>
+    document.getElementById(`2fa-otp-${Math.min(Math.max(index, 0), 5)}`)?.focus();
 
-    if (val && index < 5) {
-      const nextInp = document.getElementById(`2fa-otp-${index + 1}`);
-      nextInp?.focus();
+  /** Spreads a multi-character value across the boxes, so a paste fills them all. */
+  const fillOtpFrom = (index: number, raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return;
+    const next = [...otp];
+    for (let i = 0; i < digits.length && index + i < 6; i++) next[index + i] = digits[i];
+    setOtp(next);
+    focusOtp(index + digits.length);
+  };
+
+  const handleOtpChange = (index: number, val: string) => {
+    // Autofill and some keyboards deliver several characters at once.
+    if (val.length > 1) return fillOtpFrom(index, val);
+    const newOtp = [...otp];
+    newOtp[index] = val.replace(/\D/g, "");
+    setOtp(newOtp);
+    if (newOtp[index] && index < 5) focusOtp(index + 1);
+  };
+
+  const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    fillOtpFrom(index, e.clipboardData.getData("text"));
+  };
+
+  /** Same paste-aware fill for the password-reset OTP boxes. */
+  const fillReset = (index: number, raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return;
+    const next = [...resetOtp];
+    for (let i = 0; i < digits.length && index + i < 6; i++) next[index + i] = digits[i];
+    setResetOtp(next);
+    document.getElementById(`reset-otp-${Math.min(index + digits.length, 5)}`)?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      e.preventDefault();
+      const next = [...otp];
+      next[index - 1] = "";
+      setOtp(next);
+      focusOtp(index - 1);
     }
+    if (e.key === "ArrowLeft") { e.preventDefault(); focusOtp(index - 1); }
+    if (e.key === "ArrowRight") { e.preventDefault(); focusOtp(index + 1); }
   };
 
   const handleVerify2FA = async () => {
@@ -383,9 +421,13 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                     key={idx}
                     id={`2fa-otp-${idx}`}
                     type="text"
-                    maxLength={1}
+                    inputMode="numeric"
+                    autoComplete={idx === 0 ? "one-time-code" : "off"}
                     value={dig}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
+                    onPaste={(e) => handleOtpPaste(idx, e)}
+                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    onFocus={(e) => e.currentTarget.select()}
                     className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900"
                   />
                 ))}
@@ -523,16 +565,21 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                         key={idx}
                         id={`reset-otp-${idx}`}
                         type="text"
-                        maxLength={1}
+                        inputMode="numeric"
+                        autoComplete={idx === 0 ? "one-time-code" : "off"}
                         value={dig}
-                        onChange={(e) => {
-                          const newOtp = [...resetOtp];
-                          newOtp[idx] = e.target.value.substring(e.target.value.length - 1);
-                          setResetOtp(newOtp);
-                          if (e.target.value && idx < 5) {
-                            document.getElementById(`reset-otp-${idx + 1}`)?.focus();
+                        onChange={(e) => fillReset(idx, e.target.value)}
+                        onPaste={(e) => { e.preventDefault(); fillReset(idx, e.clipboardData.getData("text")); }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" && !resetOtp[idx] && idx > 0) {
+                            e.preventDefault();
+                            const next = [...resetOtp];
+                            next[idx - 1] = "";
+                            setResetOtp(next);
+                            document.getElementById(`reset-otp-${idx - 1}`)?.focus();
                           }
                         }}
+                        onFocus={(e) => e.currentTarget.select()}
                         className="w-10 sm:w-12 h-12 text-center text-xl font-black bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:bg-white focus:border-blue-600 font-mono text-slate-900"
                       />
                     ))}

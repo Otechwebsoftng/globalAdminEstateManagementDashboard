@@ -315,8 +315,12 @@ export const estateApi = {
     });
   },
 
-  softDelete(estateId: string) {
-    return request<ApiSingleResponse<Estate>>(`/estates/${estateId}/soft-delete`, { method: "PATCH" });
+  /** Requires a ReasonDto body — omitting it returns 400. */
+  softDelete(estateId: string, reason: string) {
+    return request<ApiSingleResponse<Estate>>(`/estates/${estateId}/soft-delete`, {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    });
   },
 
   restore(estateId: string) {

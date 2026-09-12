@@ -20,6 +20,7 @@ import { matchesSearchTerms } from "../../lib/search";
 import { getResidentName } from "../../lib/format";
 import ActionMenu from "../ActionMenu";
 import { useConfirm } from "../ui/ConfirmDialog";
+import ReasonDialog from "../ui/ReasonDialog";
 import type { Resident, Admin, Role } from "../../types/api";
 
 interface EstateDetailViewProps {
@@ -242,6 +243,22 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     }
   };
 
+  /**
+   * These routes are restricted to the estate's contact admin — the person
+   * named when the estate was onboarded — not to any global admin. The server
+   * scopes the lookup to that admin, so an unauthorised caller gets 404 rather
+   * than 403. Say that plainly instead of showing a bare "Not found".
+   */
+  const estateActionError = (err: any, verb: string) => {
+    if (err?.status === 404) {
+      return `Only this estate's contact admin can ${verb} it. You are signed in as a different admin.`;
+    }
+    if (err?.status === 409) {
+      return `This estate cannot be ${verb === "suspend" ? "suspended" : "deleted"} in its current state.`;
+    }
+    return err?.message || "The action could not be completed.";
+  };
+
   // Estate lifecycle — soft-delete is the backend's "suspend".
   const runEstateAction = async (
     action: () => Promise<unknown>,
@@ -258,15 +275,25 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
       showToast(success, "success");
       if (goBack) onBack();
     } catch (err: any) {
-      showToast(err?.message || "The action could not be completed.");
+      showToast(estateActionError(err, "complete"));
     }
   };
 
-  const handleEstateSuspend = () => runEstateAction(
-    () => estateApi.softDelete(estate.id),
-    { title: "Suspend this estate?", description: `${estate?.name ?? "The estate"} will be soft-deleted and hidden from active listings. You can restore it afterwards.`, confirmLabel: "Suspend", tone: "warning" },
-    "Estate suspended",
-  );
+  const [isSuspending, setIsSuspending] = useState(false);
+
+  const handleEstateSuspendConfirmed = async (reason: string) => {
+    if (!estate?.id) return;
+    try {
+      await estateApi.softDelete(estate.id, reason);
+      queryClient.invalidateQueries({ queryKey: qk.estates() });
+      queryClient.invalidateQueries({ queryKey: qk.estate(estate.id) });
+      showToast("Estate suspended", "success");
+      setIsSuspending(false);
+    } catch (err: any) {
+      showToast(estateActionError(err, "suspend"));
+      throw err;
+    }
+  };
 
   const handleEstateRestore = () => runEstateAction(
     () => estateApi.restore(estate.id),
@@ -276,7 +303,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
 
   const handleEstateDelete = () => runEstateAction(
     () => estateApi.remove(estate.id),
-    { title: "Delete this estate permanently?", description: "This cannot be undone. Only the contact admin can delete an estate.", confirmLabel: "Delete", tone: "danger" },
+    { title: "Delete this estate permanently?", description: "This cannot be undone, and only the estate's contact admin is allowed to do it.", confirmLabel: "Delete", tone: "danger" },
     "Estate deleted",
     true,
   );
@@ -790,7 +817,7 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
             Edit Estate
           </button>
           <button
-            onClick={handleEstateSuspend}
+            onClick={() => setIsSuspending(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl text-xs font-black text-amber-700 hover:bg-amber-100 transition-all"
           >
             <Ban className="h-3.5 w-3.5" />
@@ -893,6 +920,16 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
           </button>
         ))}
       </div>
+
+      <ReasonDialog
+        open={isSuspending}
+        onClose={() => setIsSuspending(false)}
+        onConfirm={handleEstateSuspendConfirmed}
+        title="Suspend this estate?"
+        description={`${estate?.name ?? "This estate"} will be hidden from active listings. The backend requires a reason. You can restore it afterwards.`}
+        confirmLabel="Suspend Estate"
+        tone="warning"
+      />
 
       {/* Active Tab View */}
       <div className="min-h-[500px]">
