@@ -25,6 +25,9 @@ export interface AssetApi {
   create(dto: CreatePropertyDto, estateId: string): Promise<Property>;
   update(id: string, estateId: string, patch: Partial<Property>): Promise<unknown>;
   temporarilyRemove(id: string, estateId: string, reason: string): Promise<unknown>;
+  restore(id: string, estateId: string): Promise<unknown>;
+  remove(id: string, estateId: string): Promise<unknown>;
+  removeOccupant(userId: string, estateId: string, propertyId: string): Promise<unknown>;
 }
 
 const availabilityOf = (r: any): Availability => {
@@ -150,8 +153,19 @@ const assetRealApi: AssetApi = {
 
   update(id, estateId, patch) {
     return residentAssetApi.update(id, estateId, {
+      propertyType: patch.propertyType,
       propertyName: patch.propertyName,
+      propertyNumber: patch.propertyNumber,
+      houseNumber: patch.houseNumber,
+      numberOfRooms: patch.noOfRooms,
+      floorNumber: patch.floorNumber === undefined ? undefined : Number(patch.floorNumber),
+      numberOfFloors: patch.totalNoOfFloors,
       description: patch.description,
+      address: patch.address,
+      street: patch.street,
+      city: patch.city,
+      state: patch.state,
+      country: patch.country,
       isForRent: patch.forRent,
       isForSale: patch.forSale,
     });
@@ -160,6 +174,11 @@ const assetRealApi: AssetApi = {
   temporarilyRemove(id, estateId, reason) {
     return residentAssetApi.softDelete(id, estateId, reason);
   },
+
+  restore: (id, estateId) => residentAssetApi.restore(id, estateId),
+  remove: (id, estateId) => residentAssetApi.remove(id, estateId),
+  removeOccupant: (userId, estateId, propertyId) =>
+    residentAssetApi.removeOccupant(userId, estateId, propertyId),
 };
 
 export const assetApi: AssetApi = USE_MOCKS ? assetsMockApi : assetRealApi;

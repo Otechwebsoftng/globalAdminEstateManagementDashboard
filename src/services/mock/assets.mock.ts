@@ -126,5 +126,23 @@ export const assetsMockApi = {
     return store.update(id, { status: "REMOVED", availability: "NONE", removedReason: reason });
   },
 
+  async restore(id: string, _estateId?: string) {
+    await simulateLatency();
+    return store.update(id, { status: "ACTIVE", removedReason: undefined });
+  },
+
+  async remove(id: string, _estateId?: string) {
+    await simulateLatency();
+    store.remove(id);
+  },
+
+  async removeOccupant(_userId: string, _estateId: string, propertyId: string) {
+    await simulateLatency();
+    return store.update(propertyId, {
+      occupantName: undefined, occupantPhone: undefined,
+      occupantUnit: undefined, availability: "NONE",
+    });
+  },
+
   reset: () => store.reset(),
 };

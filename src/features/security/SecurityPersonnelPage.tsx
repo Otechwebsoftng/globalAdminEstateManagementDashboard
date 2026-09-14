@@ -2,18 +2,21 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ShieldCheck, Search, Download, UserPlus, MoreVertical, Eye, Ban, RotateCcw, Filter,
+  LogOut, Trash2,
 } from "lucide-react";
 import ActionMenu from "../../components/ActionMenu";
 import { TableSkeleton } from "../../components/Skeleton";
 import { FloatingSelect } from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Badge from "../../components/ui/Badge";
+import ReasonDialog from "../../components/ui/ReasonDialog";
 import MockBadge from "../../components/ui/MockBadge";
 import OnboardSecurityPersonnelModal from "./OnboardSecurityPersonnelModal";
 import { useToast } from "../../components/Toast";
 import { useEstateScope } from "../../hooks/useEstateScope";
 import EstateScopeBar from "../shared/EstateScopeBar";
 import { queryClient } from "../../lib/queryClient";
+import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { securityApi, SECURITY_IS_MOCK } from "../../services/securityApi";
 import { SHIFTS, shiftLabel, gateLabel, type SecurityPersonnel } from "../../types/security";
 import type { CreateSecurityPersonnelDto } from "../../types/security";
@@ -65,6 +68,7 @@ export default function SecurityPersonnelPage({
   onView,
 }: { onView?: (p: SecurityPersonnel) => void }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const scope = useEstateScope();
   const estateId = scope.estateId ?? "";
   const [page, setPage] = useState(1);
@@ -72,6 +76,7 @@ export default function SecurityPersonnelPage({
   const [status, setStatus] = useState("All");
   const [shift, setShift] = useState("All");
   const [isOnboardOpen, setIsOnboardOpen] = useState(false);
+  const [suspending, setSuspending] = useState<SecurityPersonnel | null>(null);
 
   const params = useMemo(
     () => ({ estateId, page, pageSize: PAGE_SIZE, search, status, shift }),
@@ -106,14 +111,46 @@ export default function SecurityPersonnelPage({
     showToast("Invitation sent", "success");
   };
 
-  const toggleSuspend = async (p: SecurityPersonnel) => {
+  const updateStatus = async (p: SecurityPersonnel, reason?: string) => {
     const next = p.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     try {
-      await securityApi.setStatus(p.id, next, estateId);
+      await securityApi.setStatus(p.id, next, estateId, reason);
       invalidate();
       showToast(next === "SUSPENDED" ? "Personnel suspended" : "Personnel restored", "success");
     } catch (err: any) {
       showToast(err?.message || "Could not update status");
+    }
+  };
+
+  const removeFromEstate = async (p: SecurityPersonnel) => {
+    const ok = await confirm({
+      title: "Remove from this estate?",
+      description: `${p.firstName} ${p.lastName} will be unassigned from this estate but their account is kept.`,
+      confirmLabel: "Remove", tone: "warning",
+    });
+    if (!ok) return;
+    try {
+      await securityApi.removeFromEstate(p.id, estateId);
+      invalidate();
+      showToast("Removed from estate", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Could not remove from the estate");
+    }
+  };
+
+  const deletePersonnel = async (p: SecurityPersonnel) => {
+    const ok = await confirm({
+      title: "Delete this personnel permanently?",
+      description: `${p.firstName} ${p.lastName} will be deleted. This cannot be undone.`,
+      confirmLabel: "Delete", tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      await securityApi.remove(p.id, estateId);
+      invalidate();
+      showToast("Personnel deleted", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Could not delete this personnel");
     }
   };
 
@@ -254,12 +291,26 @@ export default function SecurityPersonnelPage({
                         View Details
                       </button>
                       <button
-                        onClick={() => toggleSuspend(p)}
+                        onClick={() => p.status === "SUSPENDED" ? updateStatus(p) : setSuspending(p)}
                         className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
                       >
                         {p.status === "SUSPENDED"
                           ? <><RotateCcw className="h-3.5 w-3.5 text-emerald-600" />Restore</>
                           : <><Ban className="h-3.5 w-3.5 text-amber-600" />Suspend</>}
+                      </button>
+                      <button
+                        onClick={() => removeFromEstate(p)}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+                      >
+                        <LogOut className="h-3.5 w-3.5 text-amber-600" />
+                        Remove from Estate
+                      </button>
+                      <button
+                        onClick={() => deletePersonnel(p)}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete Permanently
                       </button>
                     </ActionMenu>
                   </td>
@@ -282,6 +333,16 @@ export default function SecurityPersonnelPage({
         open={isOnboardOpen}
         onClose={() => setIsOnboardOpen(false)}
         onSubmit={handleOnboard}
+      />
+
+      <ReasonDialog
+        open={!!suspending}
+        onClose={() => setSuspending(null)}
+        onConfirm={(reason) => suspending ? updateStatus(suspending, reason) : Promise.resolve()}
+        title="Suspend this personnel?"
+        description="Suspension requires a reason and can be reversed later."
+        confirmLabel="Suspend Personnel"
+        tone="warning"
       />
     </div>
   );

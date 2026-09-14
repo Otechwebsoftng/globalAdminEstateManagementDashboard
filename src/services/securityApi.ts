@@ -13,7 +13,15 @@ export interface SecurityApi {
   getById(id: string, estateId: string): Promise<SecurityPersonnel | undefined>;
   stats(estateId: string): Promise<SecurityStats>;
   create(dto: CreateSecurityPersonnelDto, estateId: string): Promise<SecurityPersonnel>;
-  setStatus(id: string, status: SecurityPersonnel["status"], estateId: string): Promise<unknown>;
+  setStatus(
+    id: string,
+    status: SecurityPersonnel["status"],
+    estateId: string,
+    reason?: string,
+  ): Promise<unknown>;
+  removeFromEstate(id: string, estateId: string): Promise<unknown>;
+  remove(id: string, estateId: string): Promise<unknown>;
+  verifyCode(code: string): Promise<unknown>;
 }
 
 /** Maps a backend personnel record onto the shape the screens consume. */
@@ -101,11 +109,15 @@ const securityRealApi: SecurityApi = {
     return toPersonnel((res as any)?.data ?? res ?? body);
   },
 
-  setStatus(id, status) {
+  setStatus(id, status, _estateId, reason) {
     return status === "SUSPENDED"
-      ? securityPersonnelApi.softDelete(id)
+      ? securityPersonnelApi.softDelete(id, reason?.trim() || "Suspended by an administrator")
       : securityPersonnelApi.restore(id);
   },
+
+  removeFromEstate: (id, estateId) => securityPersonnelApi.removeFromEstate(id, estateId),
+  remove: (id, estateId) => securityPersonnelApi.remove(id, estateId),
+  verifyCode: (code) => securityPersonnelApi.verifyCode({ code }),
 };
 
 export const securityApi: SecurityApi = USE_MOCKS ? securityMockApi : securityRealApi;

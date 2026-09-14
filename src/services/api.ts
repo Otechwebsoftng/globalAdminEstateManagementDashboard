@@ -28,6 +28,9 @@ import type {
 
 const API_PREFIX = "/api/v1";
 
+/** Account types that own a password-reset route group. */
+export type PasswordScope = "global-admin" | "estate-admin" | "residents";
+
 /** Builds a query string, dropping undefined/empty values. */
 export function qs(params?: Record<string, unknown>): string {
   if (!params) return "";
@@ -134,6 +137,20 @@ export const authApi = {
     });
   },
 
+  loginResident(data: LoginDto) {
+    return request<LoginResponse>("/auth/resident/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  loginSecurity(data: LoginDto) {
+    return request<LoginResponse>("/auth/security/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
   verifyOtp(data: ActivateAccountDto, mfaToken?: string) {
     return request<any>("/auth/admin/verify-user", {
       method: "PATCH",
@@ -146,6 +163,35 @@ export const authApi = {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  },
+
+  /**
+   * Password-reset routes exist per account type under their own prefix.
+   * `global-admin`, `estate-admin` and `residents` each expose the same four.
+   */
+  passwordFlow(scope: PasswordScope) {
+    return {
+      forgot: (data: SendPasswordOtpDto) =>
+        request<{ success: boolean; message: string }>(`/${scope}/forgot-password`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+      verifyOtp: (data: ActivateAccountDto) =>
+        request<{ success: boolean; message: string }>(`/${scope}/verify-password-otp`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+      resend: (data: ResendOTPDto) =>
+        request<{ success: boolean; message: string }>(`/${scope}/resend-otp`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+      reset: (otp: string, data: ResetPasswordDto) =>
+        request<{ success: boolean; message: string }>(`/${scope}/reset-password/${otp}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+    };
   },
 
   forgotPassword(data: SendPasswordOtpDto) {
@@ -450,8 +496,11 @@ export const securityPersonnelApi = {
     });
   },
 
-  softDelete(userId: string) {
-    return request<any>(`/security-personnel/${userId}/soft-delete`, { method: "PATCH" });
+  softDelete(userId: string, reason: string) {
+    return request<any>(`/security-personnel/${userId}/soft-delete`, {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    });
   },
 
   restore(userId: string) {

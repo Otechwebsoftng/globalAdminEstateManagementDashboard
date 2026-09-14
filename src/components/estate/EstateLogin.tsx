@@ -2,17 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { ShieldCheck, Mail, Lock, ArrowRight, Check, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { User } from "../../context/AuthContext";
-import { homePathFor, type Persona } from "../../config/personas";
+import { homePathFor, passwordScopeFor, PERSONA_OPTIONS, personaLabel, type Persona } from "../../config/personas";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../services/api";
+import { normalizeOtpText } from "../../lib/otp";
 
 const OTP_LEN = 6;
 const emptyOtp = () => Array.from({ length: OTP_LEN }, () => "");
-
-/** Pull digits from clipboard / autofill text (handles "123 456", "code: 123456", etc.). */
-function extractOtpDigits(raw: string, max = OTP_LEN): string {
-  return raw.replace(/\D/g, "").slice(0, max);
-}
 
 interface EstateLoginProps {
   onLoginSuccess?: (adminName: string) => void;
@@ -22,6 +18,8 @@ interface EstateLoginProps {
 export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLoginProps) {
   const auth = useAuth();
   const [persona, setPersona] = useState<Persona>("GLOBAL_ADMIN");
+  // Reset routes live under each account type's own prefix.
+  const pwFlow = authApi.passwordFlow(passwordScopeFor(persona));
   const navigate = useNavigate();
   const [authStep, setAuthStep] = useState<"login" | "two-factor" | "reset-password" | "set-new-password">("login");
   const [email, setEmail] = useState("");
@@ -32,7 +30,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   // 2FA state
   const [otp, setOtp] = useState<string[]>(emptyOtp);
   const [countdown, setCountdown] = useState(252);
-  /** Guards against the post-paste `onChange` that would wipe a just-filled OTP. */
+  /** Guards against the post-paste `onChange` that would overwrite a just-filled OTP. */
   const otpPasteLock = useRef(false);
   const resetPasteLock = useRef(false);
   
@@ -82,8 +80,10 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setIsLoading(true);
 
     try {
-      const login = persona === "ESTATE_ADMIN"
-        ? authApi.loginEstateAdmin
+      const login =
+        persona === "ESTATE_ADMIN" ? authApi.loginEstateAdmin
+        : persona === "RESIDENT" ? authApi.loginResident
+        : persona === "SECURITY" ? authApi.loginSecurity
         : authApi.loginGlobalAdmin;
       const response = await login({ email, password }) as any;
       console.log("Login response:", response);
@@ -108,24 +108,22 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     document.getElementById(`reset-otp-${Math.min(Math.max(index, 0), OTP_LEN - 1)}`)?.focus();
 
   /**
-   * Spread digits across boxes. Full 6-digit pastes always start at box 0 so
-   * pasting into any field (or with leftover digits) still fills the whole OTP.
+   * Spread text across boxes, starting at the box where the user pasted.
    */
-  const applyOtpDigits = (
+  const applyOtpText = (
     setCodes: React.Dispatch<React.SetStateAction<string[]>>,
     focus: (i: number) => void,
     index: number,
     raw: string,
   ) => {
-    const digits = extractOtpDigits(raw);
-    if (!digits) return;
-    const start = digits.length >= OTP_LEN ? 0 : index;
+    const text = normalizeOtpText(raw, OTP_LEN - index);
+    if (!text) return;
     setCodes((prev) => {
       const next = [...prev];
-      for (let i = 0; i < digits.length && start + i < OTP_LEN; i++) next[start + i] = digits[i];
+      for (let i = 0; i < text.length && index + i < OTP_LEN; i++) next[index + i] = text[i];
       return next;
     });
-    focus(Math.min(start + digits.length, OTP_LEN - 1));
+    focus(Math.min(index + text.length, OTP_LEN - 1));
   };
 
   const lockPaste = (lock: React.MutableRefObject<boolean>) => {
@@ -138,40 +136,40 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
   const handleOtpChange = (index: number, val: string) => {
     if (otpPasteLock.current) return;
     // Autofill and some keyboards deliver several characters at once.
-    if (val.length > 1) return applyOtpDigits(setOtp, focusOtp, index, val);
-    const digit = val.replace(/\D/g, "").slice(-1);
+    if (val.length > 1) return applyOtpText(setOtp, focusOtp, index, val);
+    const character = normalizeOtpText(val, 1);
     setOtp((prev) => {
       const next = [...prev];
-      next[index] = digit;
+      next[index] = character;
       return next;
     });
-    if (digit && index < OTP_LEN - 1) focusOtp(index + 1);
+    if (character && index < OTP_LEN - 1) focusOtp(index + 1);
   };
 
   const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     lockPaste(otpPasteLock);
     const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
-    applyOtpDigits(setOtp, focusOtp, index, text);
+    applyOtpText(setOtp, focusOtp, index, text);
   };
 
   const handleResetOtpChange = (index: number, val: string) => {
     if (resetPasteLock.current) return;
-    if (val.length > 1) return applyOtpDigits(setResetOtp, focusResetOtp, index, val);
-    const digit = val.replace(/\D/g, "").slice(-1);
+    if (val.length > 1) return applyOtpText(setResetOtp, focusResetOtp, index, val);
+    const character = normalizeOtpText(val, 1);
     setResetOtp((prev) => {
       const next = [...prev];
-      next[index] = digit;
+      next[index] = character;
       return next;
     });
-    if (digit && index < OTP_LEN - 1) focusResetOtp(index + 1);
+    if (character && index < OTP_LEN - 1) focusResetOtp(index + 1);
   };
 
   const handleResetOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     lockPaste(resetPasteLock);
     const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
-    applyOtpDigits(setResetOtp, focusResetOtp, index, text);
+    applyOtpText(setResetOtp, focusResetOtp, index, text);
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -212,7 +210,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
         const userData: User = {
           id: user.id,
           name: `${user.firstName} ${user.lastName}`,
-          role: user.role?.name || (persona === "ESTATE_ADMIN" ? "Estate Administrator" : "Global Administrator"),
+          role: user.role?.name || personaLabel(persona),
           email: user.email,
           // Only the global-admin login path exists today; the estate-admin
           // toggle sets this to ESTATE_ADMIN when it lands.
@@ -242,7 +240,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
 
   const handleResendOtp = async () => {
     try {
-      await authApi.resendOtp({ otpType: "ADMIN_LOGIN", email });
+      await pwFlow.resend({ otpType: "ADMIN_LOGIN", email });
       setCountdown(252);
     } catch (err: any) {
       setErrors(err.message || "Failed to resend OTP.");
@@ -257,7 +255,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     }
     setIsLoading(true);
     try {
-      await authApi.forgotPassword({ email });
+      await pwFlow.forgot({ email });
       setResetEmail(email);
       setAuthStep("set-new-password");
       setResetStep("otp");
@@ -276,7 +274,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     }
     setIsLoading(true);
     try {
-      await authApi.verifyPasswordOtp({
+      await pwFlow.verifyOtp({
         otpType: "FORGOT_PASSWORD",
         otp: code,
         email: resetEmail,
@@ -302,7 +300,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
     setIsLoading(true);
     try {
       const code = resetOtp.join("");
-      await authApi.resetPassword(code, { password: newPassword, email: resetEmail });
+      await pwFlow.reset(code, { password: newPassword, email: resetEmail });
       alert("Security Credentials successfully updated! You can now sign in with your new password.");
       setAuthStep("login");
       setResetStep("email");
@@ -346,16 +344,13 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
 
               {/* Which portal to sign in to. Drives the login endpoint and
                   the post-OTP redirect. */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
-                {([
-                  { key: "GLOBAL_ADMIN", label: "Platform Admin" },
-                  { key: "ESTATE_ADMIN", label: "Estate Admin" },
-                ] as const).map((opt) => (
+              <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl">
+                {PERSONA_OPTIONS.map((opt) => (
                   <button
                     key={opt.key}
                     type="button"
                     onClick={() => setPersona(opt.key)}
-                    className={`py-2 rounded-lg text-[11px] font-black transition-all ${
+                    className={`py-2 rounded-lg text-[10px] font-black transition-all ${
                       persona === opt.key
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-800"
@@ -389,13 +384,16 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                       Password
                     </label>
-                    <button 
-                      type="button"
-                      onClick={() => setAuthStep("reset-password")}
-                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 underline"
-                    >
-                      Forgot Password?
-                    </button>
+                    {/* Security personnel have no reset routes on the backend. */}
+                    {persona !== "SECURITY" && (
+                      <button
+                        type="button"
+                        onClick={() => setAuthStep("reset-password")}
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Forgot Password?
+                      </button>
+                    )}
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-3.5 h-4.5 w-4.5 text-gray-400" />
@@ -463,7 +461,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                 </p>
               </div>
 
-              {/* Digits row — paste on any box fills all six */}
+              {/* Text OTP row — paste starts at the focused box. */}
               <div
                 className="flex gap-2.5 sm:gap-3 justify-center my-6"
                 onPaste={(e) => {
@@ -472,7 +470,7 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                   e.preventDefault();
                   lockPaste(otpPasteLock);
                   const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
-                  applyOtpDigits(setOtp, focusOtp, 0, text);
+                  applyOtpText(setOtp, focusOtp, 0, text);
                 }}
               >
                 {otp.map((dig, idx) => (
@@ -480,10 +478,10 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                     key={idx}
                     id={`2fa-otp-${idx}`}
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete={idx === 0 ? "one-time-code" : "off"}
-                    aria-label={`Digit ${idx + 1} of ${OTP_LEN}`}
+                    inputMode="text"
+                    autoComplete="off"
+                    maxLength={1}
+                    aria-label={`Character ${idx + 1} of ${OTP_LEN}`}
                     value={dig}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onPaste={(e) => handleOtpPaste(idx, e)}
@@ -626,10 +624,10 @@ export default function EstateLogin({ onLoginSuccess, onBackToMain }: EstateLogi
                         key={idx}
                         id={`reset-otp-${idx}`}
                         type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        autoComplete={idx === 0 ? "one-time-code" : "off"}
-                        aria-label={`Reset code digit ${idx + 1} of ${OTP_LEN}`}
+                        inputMode="text"
+                        autoComplete="off"
+                        maxLength={1}
+                        aria-label={`Reset code character ${idx + 1} of ${OTP_LEN}`}
                         value={dig}
                         onChange={(e) => handleResetOtpChange(idx, e.target.value)}
                         onPaste={(e) => handleResetOtpPaste(idx, e)}

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Home, CheckCircle2, KeyRound, DollarSign, Search, Download, PlusCircle,
-  MoreVertical, Eye, Pencil, Trash2, Filter,
+  MoreVertical, Eye, Pencil, Trash2, Filter, RotateCcw,
 } from "lucide-react";
 import ActionMenu from "../../components/ActionMenu";
 import { TableSkeleton } from "../../components/Skeleton";
@@ -16,6 +16,7 @@ import { useToast } from "../../components/Toast";
 import { useEstateScope } from "../../hooks/useEstateScope";
 import EstateScopeBar from "../shared/EstateScopeBar";
 import { queryClient } from "../../lib/queryClient";
+import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { assetApi, ASSETS_IS_MOCK } from "../../services/assetApi";
 import {
   PROPERTY_TYPES, propertyTypeLabel, availabilityLabel,
@@ -85,6 +86,7 @@ export default function AssetsListPage({
   kind, onView,
 }: { kind: AssetKind; onView?: (p: Property) => void }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const scope = useEstateScope();
   const estateId = scope.estateId ?? "";
   const copy = COPY[kind];
@@ -138,6 +140,32 @@ export default function AssetsListPage({
       setRemoving(null);
     } catch (err: any) {
       showToast(err?.message || "Could not remove the property");
+    }
+  };
+
+  const restore = async (p: Property) => {
+    try {
+      await assetApi.restore(p.id, estateId);
+      invalidate();
+      showToast("Property restored", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Could not restore the property");
+    }
+  };
+
+  const destroy = async (p: Property) => {
+    const ok = await confirm({
+      title: "Delete this property permanently?",
+      description: `${p.propertyName} will be removed for good. This cannot be undone.`,
+      confirmLabel: "Delete", tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      await assetApi.remove(p.id, estateId);
+      invalidate();
+      showToast("Property deleted", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Could not delete the property");
     }
   };
 
@@ -284,9 +312,20 @@ export default function AssetsListPage({
                         <Pencil className="h-3.5 w-3.5 text-slate-500" />
                         Edit Property
                       </button>
-                      <button onClick={() => setRemoving(p)} className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50">
+                      {p.status === "REMOVED" ? (
+                        <button onClick={() => restore(p)} className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-emerald-700 hover:bg-emerald-50">
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Restore Property
+                        </button>
+                      ) : (
+                        <button onClick={() => setRemoving(p)} className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-amber-700 hover:bg-amber-50">
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Temporarily Remove
+                        </button>
+                      )}
+                      <button onClick={() => destroy(p)} className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-50">
                         <Trash2 className="h-3.5 w-3.5" />
-                        Temporarily Remove
+                        Delete Permanently
                       </button>
                     </ActionMenu>
                   </td>

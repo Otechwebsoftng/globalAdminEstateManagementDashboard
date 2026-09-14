@@ -5,11 +5,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import ActionMenu from "../../components/ActionMenu";
+import Modal from "../../components/ui/Modal";
+import { FloatingInput } from "../../components/ui/Field";
 import Badge from "../../components/ui/Badge";
 import MockBadge from "../../components/ui/MockBadge";
 import { CardSkeleton } from "../../components/Skeleton";
 import TemporarilyDeleteModal from "./TemporarilyDeleteModal";
 import { useToast } from "../../components/Toast";
+import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { queryClient } from "../../lib/queryClient";
 import { assetApi, ASSETS_IS_MOCK } from "../../services/assetApi";
 import { availabilityLabel, propertyTypeLabel, type AssetKind } from "../../types/asset";
@@ -37,7 +40,10 @@ export default function PropertyDetail({
   propertyId, estateId, kind, onBack,
 }: { propertyId: string; estateId: string; kind: AssetKind; onBack: () => void }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [isRemoving, setIsRemoving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({ propertyName: "", description: "", forRent: false, forSale: false });
 
   const { data: p, isLoading } = useQuery({
     queryKey: ["assets", "detail", propertyId, estateId],
@@ -55,10 +61,53 @@ export default function PropertyDetail({
     );
   }
 
+  const removeOccupant = async () => {
+    if (!p?.occupantResidentId && !p?.occupantName) return;
+    const ok = await confirm({
+      title: "Remove the current occupant?",
+      description: `${p.occupantName} will be unassigned from ${p.propertyName}.`,
+      confirmLabel: "Remove", tone: "warning",
+    });
+    if (!ok) return;
+    try {
+      await assetApi.removeOccupant(p.occupantResidentId ?? "", estateId, p.id);
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      showToast("Occupant removed", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Could not remove the occupant");
+    }
+  };
+
   const handleRemove = async (reason: string) => {
     await assetApi.temporarilyRemove(p.id, estateId, reason);
     queryClient.invalidateQueries({ queryKey: ["assets"] });
     showToast("Property temporarily removed", "success");
+  };
+
+  const openEditor = () => {
+    setEditValues({
+      propertyName: p.propertyName,
+      description: p.description,
+      forRent: p.forRent,
+      forSale: p.forSale,
+    });
+    setIsEditing(true);
+  };
+
+  const saveEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editValues.propertyName.trim()) {
+      showToast("Property name is required.");
+      return;
+    }
+    try {
+      await assetApi.update(p.id, estateId, editValues);
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      showToast("Property updated", "success");
+      setIsEditing(false);
+    } catch (err: any) {
+      showToast(err?.message || "Could not update the property");
+    }
   };
 
   const listLabel = kind === "fixed" ? "Fixed Assets" : "Mobile Assets";
@@ -85,7 +134,6 @@ export default function PropertyDetail({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Edit opens the same three sections the Add Property wizard uses. */}
           <ActionMenu
             trigger={
               <span className="flex items-center gap-1.5 px-4 py-2 text-xs font-black text-slate-700 hover:text-slate-900 cursor-pointer">
@@ -95,16 +143,13 @@ export default function PropertyDetail({
             }
             width="w-60"
           >
-            {["Edit Property Details", "Edit Property Location", "Edit Property Contact & Availability"].map((label) => (
-              <button
-                key={label}
-                onClick={() => showToast("Editing is not wired yet.")}
-                className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
-              >
-                <Pencil className="h-3.5 w-3.5 text-slate-400" />
-                {label}
-              </button>
-            ))}
+            <button
+              onClick={openEditor}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+            >
+              <Pencil className="h-3.5 w-3.5 text-slate-400" />
+              Edit property details
+            </button>
           </ActionMenu>
 
           <button
@@ -256,10 +301,10 @@ export default function PropertyDetail({
               </div>
               <button
                 disabled={!p.occupantName}
-                onClick={() => showToast("Resident linking is not wired yet.")}
+                onClick={removeOccupant}
                 className="flex items-center gap-1.5 px-3 py-2 border border-blue-200 rounded-xl text-[11px] font-black text-blue-600 hover:bg-blue-50 disabled:text-slate-300 disabled:border-gray-200 disabled:hover:bg-transparent transition-colors"
               >
-                View Resident
+                Remove Occupant
                 <ExternalLink className="h-3 w-3" />
               </button>
             </div>
@@ -272,6 +317,46 @@ export default function PropertyDetail({
         onClose={() => setIsRemoving(false)}
         onConfirm={handleRemove}
       />
+
+      <Modal
+        open={isEditing}
+        onClose={() => setIsEditing(false)}
+        title="Edit Property"
+        description="Update the fields the property API supports."
+      >
+        <form onSubmit={saveEdit} className="space-y-5">
+          <FloatingInput
+            label="Property Name"
+            value={editValues.propertyName}
+            onChange={(event) => setEditValues((values) => ({ ...values, propertyName: event.target.value }))}
+          />
+          <div className="relative">
+            <label className="absolute -top-2.5 left-4 px-3 py-0.5 bg-white text-[10px] font-black text-slate-400 border border-gray-100 rounded-full z-10 uppercase tracking-tighter">
+              Property Description
+            </label>
+            <textarea
+              rows={4}
+              value={editValues.description}
+              onChange={(event) => setEditValues((values) => ({ ...values, description: event.target.value }))}
+              className="w-full text-xs px-4 py-4 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-bold resize-none"
+            />
+          </div>
+          <div className="flex flex-wrap gap-5 text-xs font-bold text-slate-700">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={editValues.forRent} onChange={(event) => setEditValues((values) => ({ ...values, forRent: event.target.checked }))} />
+              Available for rent
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={editValues.forSale} onChange={(event) => setEditValues((values) => ({ ...values, forSale: event.target.checked }))} />
+              Available for sale
+            </label>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 text-xs font-black text-slate-600">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700">Save changes</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import EstateScopeBar from "../shared/EstateScopeBar";
 import { useEstateScope } from "../../hooks/useEstateScope";
 import { useToast } from "../../components/Toast";
 import { residentApi } from "../../services/api";
+import { queryClient } from "../../lib/queryClient";
 import { parseList } from "../../lib/parseList";
 import { getResidentName, getResidentPhone, getResidentJoinedDate } from "../../lib/format";
 import type { Resident } from "../../types/api";
@@ -182,6 +183,7 @@ export default function ResidentsPage({
                         onClick={async () => {
                           try {
                             await residentApi.removeAssignment(r.id, estateId);
+                            queryClient.invalidateQueries({ queryKey: ["residents", estateId] });
                             showToast("Assignment removed", "success");
                           } catch (err: any) {
                             showToast(err?.message || "Could not remove the assignment");

@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, ChevronRight, Download, Ban, ShieldCheck, Clock, Activity,
   CalendarDays, Phone, Mail, RotateCcw,
 } from "lucide-react";
 import Badge from "../../components/ui/Badge";
+import ReasonDialog from "../../components/ui/ReasonDialog";
 import MockBadge from "../../components/ui/MockBadge";
 import { CardSkeleton } from "../../components/Skeleton";
 import { useToast } from "../../components/Toast";
@@ -34,6 +36,7 @@ export default function SecurityPersonnelDetail({
   personnelId, estateId, onBack,
 }: { personnelId: string; estateId: string; onBack: () => void }) {
   const { showToast } = useToast();
+  const [isSuspending, setIsSuspending] = useState(false);
 
   const { data: p, isLoading } = useQuery({
     queryKey: ["security", "detail", personnelId, estateId],
@@ -53,10 +56,10 @@ export default function SecurityPersonnelDetail({
     );
   }
 
-  const toggleSuspend = async () => {
+  const toggleSuspend = async (reason?: string) => {
     const next = p.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     try {
-      await securityApi.setStatus(p.id, next, estateId);
+      await securityApi.setStatus(p.id, next, estateId, reason);
       queryClient.invalidateQueries({ queryKey: ["security"] });
       showToast(next === "SUSPENDED" ? "Personnel suspended" : "Personnel restored", "success");
     } catch (err: any) {
@@ -96,7 +99,7 @@ export default function SecurityPersonnelDetail({
             Export Logs
           </button>
           <button
-            onClick={toggleSuspend}
+            onClick={() => p.status === "SUSPENDED" ? toggleSuspend() : setIsSuspending(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl text-xs font-black text-amber-700 hover:bg-amber-100 transition-all"
           >
             {p.status === "SUSPENDED"
@@ -105,6 +108,16 @@ export default function SecurityPersonnelDetail({
           </button>
         </div>
       </div>
+
+      <ReasonDialog
+        open={isSuspending}
+        onClose={() => setIsSuspending(false)}
+        onConfirm={toggleSuspend}
+        title="Suspend this personnel?"
+        description="Suspension requires a reason and can be reversed later."
+        confirmLabel="Suspend Personnel"
+        tone="warning"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div className="lg:col-span-8 space-y-5">

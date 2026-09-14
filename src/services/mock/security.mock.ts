@@ -115,5 +115,20 @@ export const securityMockApi = {
     return store.update(id, { status });
   },
 
+  async removeFromEstate(id: string, _estateId?: string) {
+    await simulateLatency();
+    return store.update(id, { estateId: "" });
+  },
+
+  async remove(id: string, _estateId?: string) {
+    await simulateLatency();
+    store.remove(id);
+  },
+
+  async verifyCode(code: string) {
+    await simulateLatency();
+    return { valid: /^[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(code), code };
+  },
+
   reset: () => store.reset(),
 };
