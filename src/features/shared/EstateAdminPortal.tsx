@@ -1,12 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, ShieldCheck, Building2, Car, Settings as SettingsIcon, Power,
+  KeyRound, Plus,
 } from "lucide-react";
 import ResidentsPage from "../residents/ResidentsPage";
 import SecurityPersonnelPage from "../security/SecurityPersonnelPage";
 import AssetsPage from "../assets/AssetsPage";
 import SettingsPage from "../settings/SettingsPage";
+import VerifyCodePanel from "../visitors/VerifyCodePanel";
+import GenerateVisitorCodeModal from "../visitors/GenerateVisitorCodeModal";
 import { useAuth } from "../../context/AuthContext";
 import { useEstateScope } from "../../hooks/useEstateScope";
 import { useBackendMenu } from "../../hooks/useBackendMenu";
@@ -17,6 +20,7 @@ const NAV = [
   { key: "security", label: "Security Personnel", icon: ShieldCheck, path: "/estate/security" },
   { key: "assets-fixed", label: "Fixed Assets", icon: Building2, path: "/estate/assets/fixed" },
   { key: "assets-mobile", label: "Mobile Assets", icon: Car, path: "/estate/assets/mobile" },
+  { key: "visitors", label: "Visitors", icon: KeyRound, path: "/estate/visitors" },
   { key: "settings", label: "Settings", icon: SettingsIcon, path: "/estate/settings" },
 ] as const;
 
@@ -30,6 +34,7 @@ export default function EstateAdminPortal() {
   const { user, logout } = useAuth();
   const scope = useEstateScope();
   const menu = useBackendMenu();
+  const [isIssuing, setIsIssuing] = useState(false);
 
   const active = useMemo(() => {
     const parts = location.pathname.split("/").filter(Boolean); // ["estate", section, sub?]
@@ -44,6 +49,28 @@ export default function EstateAdminPortal() {
       case "security": return <SecurityPersonnelPage />;
       case "assets-fixed": return <AssetsPage kind="fixed" />;
       case "assets-mobile": return <AssetsPage kind="mobile" />;
+      case "visitors":
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-950 font-display">Visitors</h2>
+                <p className="text-xs text-gray-400 font-bold tracking-tight">
+                  Issue guest codes and verify them at the gate
+                </p>
+              </div>
+              <button
+                onClick={() => setIsIssuing(true)}
+                disabled={!scope.estateId}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-lg shadow-blue-100 disabled:opacity-50 transition-all"
+              >
+                <Plus className="h-4 w-4" />
+                Generate Visitor Code
+              </button>
+            </div>
+            <VerifyCodePanel />
+          </div>
+        );
       case "settings": return <SettingsPage />;
       default:
         return (
@@ -137,6 +164,11 @@ export default function EstateAdminPortal() {
           </div>
         </header>
         <div className="p-6">{body()}</div>
+        <GenerateVisitorCodeModal
+          open={isIssuing}
+          estateId={scope.estateId ?? ""}
+          onClose={() => setIsIssuing(false)}
+        />
       </main>
     </div>
   );
