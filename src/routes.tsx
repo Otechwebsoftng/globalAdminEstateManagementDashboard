@@ -9,6 +9,8 @@ import HomeRedirect from "./components/guards/HomeRedirect";
 import EstateLogin from "./components/estate/EstateLogin";
 import GlobalDashboard from "./components/estate/GlobalDashboard";
 import EstateAdminPortal from "./features/shared/EstateAdminPortal";
+import ResidentPortal from "./features/resident/ResidentPortal";
+import SecurityPortal from "./features/security/SecurityPortal";
 
 /** Wraps the authenticated tree in the session-expiry gate and error boundary. */
 function AuthenticatedShell() {
@@ -51,6 +53,24 @@ export default function AppRoutes() {
             element={
               <RequireRole allow={["GLOBAL_ADMIN"]}>
                 <GlobalDashboard />
+              </RequireRole>
+            }
+          />
+
+          <Route
+            path="/resident/*"
+            element={
+              <RequireRole allow={["RESIDENT"]}>
+                <ResidentPortal />
+              </RequireRole>
+            }
+          />
+
+          <Route
+            path="/security/*"
+            element={
+              <RequireRole allow={["SECURITY"]}>
+                <SecurityPortal />
               </RequireRole>
             }
           />
