@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Users, UserCheck, Clock, Search, MoreVertical, Eye, Ban, Filter,
+  Users, UserCheck, Clock, Search, MoreVertical, Eye, Ban, Filter, Pencil,
 } from "lucide-react";
 import ActionMenu from "../../components/ActionMenu";
 import { TableSkeleton } from "../../components/Skeleton";
@@ -9,6 +9,7 @@ import { FloatingSelect } from "../../components/ui/Select";
 import Pagination from "../../components/ui/Pagination";
 import Badge from "../../components/ui/Badge";
 import EstateScopeBar from "../shared/EstateScopeBar";
+import EditResidentModal from "./EditResidentModal";
 import { useEstateScope } from "../../hooks/useEstateScope";
 import { useToast } from "../../components/Toast";
 import { residentApi } from "../../services/api";
@@ -51,6 +52,7 @@ export default function ResidentsPage({
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
+  const [editing, setEditing] = useState<Resident | null>(null);
 
   const params = useMemo(
     () => ({ page, pageSize: PAGE_SIZE, search, status }),
@@ -180,6 +182,13 @@ export default function ResidentsPage({
                         View Resident
                       </button>
                       <button
+                        onClick={() => setEditing(r)}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                        Edit Resident
+                      </button>
+                      <button
                         onClick={async () => {
                           try {
                             await residentApi.removeAssignment(r.id, estateId);
@@ -207,6 +216,12 @@ export default function ResidentsPage({
           onPageChange={setPage} noun="Residents"
         />
       </div>
+
+      <EditResidentModal
+        resident={editing}
+        estateId={estateId}
+        onClose={() => setEditing(null)}
+      />
     </div>
   );
 }

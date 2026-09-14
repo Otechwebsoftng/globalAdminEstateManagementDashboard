@@ -4,7 +4,7 @@ import {
   Building2, Users, HardHat, ShieldCheck, Search, Plus, Trash2, MapPin, Menu,
   X, TrendingUp, KeyRound, Check, RefreshCw, HelpCircle, FileText, Ban,
   Power, ShieldAlert, ChevronDown, Bell, Eye, Ban as BanIcon, Edit,
-  MoreVertical, Mail, Phone, UserX, ArrowLeft, Car
+  MoreVertical, Mail, Phone, UserX, ArrowLeft, Car, ListTree
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import EstateDetailView from "./EstateDetailView";
@@ -14,12 +14,14 @@ import OnboardEstateWizard from "../../features/estates/OnboardEstateWizard";
 import SettingsPage from "../../features/settings/SettingsPage";
 import SecurityPersonnelPage from "../../features/security/SecurityPersonnelPage";
 import ResidentsPage from "../../features/residents/ResidentsPage";
+import MenuManager from "../../features/menu/MenuManager";
 import SecurityPersonnelDetail from "../../features/security/SecurityPersonnelDetail";
 import AssetsPage from "../../features/assets/AssetsPage";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../Toast";
+import { useConfirm } from "../ui/ConfirmDialog";
 import { globalAdminApi, estateApi, roleApi, menuApi, permissionApi, healthApi } from "../../services/api";
 import { queryClient } from "../../lib/queryClient";
 import { qk } from "../../lib/queryKeys";
@@ -87,6 +89,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const location = useLocation();
   const auth = useAuth();
   const { showToast } = useToast();
+  const confirm = useConfirm();
 
   const adminName = auth.user?.name || "Administrator";
 
@@ -100,7 +103,7 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   const activeMenu = useMemo(() => {
     const parts = location.pathname.split("/").filter(Boolean);
     const menuFromPath = parts[1] || "dashboard";
-    const validMenus = ["dashboard", "estates", "residents", "staff", "security", "assets", "admins", "plans", "billing", "tickets", "logs", "settings"];
+    const validMenus = ["dashboard", "estates", "residents", "staff", "security", "assets", "admins", "menu", "plans", "billing", "tickets", "logs", "settings"];
     return validMenus.includes(menuFromPath) ? menuFromPath as typeof validMenus[number] : "dashboard";
   }, [location.pathname]);
 
@@ -439,7 +442,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   };
 
   const handleAdminSuspend = async (adminId: string) => {
-    if (!window.confirm("Are you sure you want to suspend this admin?")) return;
+    const ok = await confirm({
+      title: "Suspend this admin?",
+      description: "They will lose access until restored.",
+      confirmLabel: "Suspend", tone: "warning",
+    });
+    if (!ok) return;
     try {
       await globalAdminApi.suspend(adminId);
       queryClient.invalidateQueries({ queryKey: qk.admins() });
@@ -459,12 +467,34 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
     }
   };
 
-  const handleAdminSoftDelete = async (adminId: string) => {
-    if (!window.confirm("Are you sure you want to delete this admin? This action cannot be undone.")) return;
+  const handleAdminSoftDelete = async (adminId: string, name?: string) => {
+    const ok = await confirm({
+      title: "Deactivate this admin?",
+      description: `${name || "This admin"} will be soft-deleted and can be restored later.`,
+      confirmLabel: "Deactivate", tone: "warning",
+    });
+    if (!ok) return;
     try {
       await globalAdminApi.softDelete(adminId);
       queryClient.invalidateQueries({ queryKey: qk.admins() });
-      showToast("Admin deleted");
+      showToast("Admin deactivated", "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to deactivate admin");
+    }
+  };
+
+  /** DELETE /global-admin/{adminId} — irreversible, unlike soft-delete. */
+  const handleAdminHardDelete = async (adminId: string, name?: string) => {
+    const ok = await confirm({
+      title: "Delete this admin permanently?",
+      description: `${name || "This admin"} will be removed for good. This cannot be undone.`,
+      confirmLabel: "Delete", tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      await globalAdminApi.remove(adminId);
+      queryClient.invalidateQueries({ queryKey: qk.admins() });
+      showToast("Admin deleted", "success");
     } catch (err: any) {
       showToast(err.message || "Failed to delete admin");
     }
@@ -500,7 +530,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   };
 
   const handleDeleteRole = async (roleId: string) => {
-    if (!window.confirm("Delete this role? This cannot be undone.")) return;
+    const ok = await confirm({
+      title: "Delete this role?",
+      description: "Any admin holding it will lose its permissions. This cannot be undone.",
+      confirmLabel: "Delete", tone: "danger",
+    });
+    if (!ok) return;
     try {
       await roleApi.delete(roleId);
       queryClient.invalidateQueries({ queryKey: qk.roles() });
@@ -737,6 +772,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
           >
             <FileText className="h-4.5 w-4.5" />
             <span>System Logs</span>
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/menu")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeMenu === "menu" ? "bg-blue-50 text-blue-600 border-r-4 border-blue-600" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+            }`}
+          >
+            <ListTree className="h-5 w-5" />
+            <span>Menu</span>
           </button>
 
           <button
@@ -1681,8 +1726,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                   <span>View Profile</span>
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    const confirmAction = window.confirm(`Suspend access credentials for ${st.name}?`);
+                                  onClick={async () => {
+                                    const confirmAction = await confirm({
+                                      title: "Suspend this staff member?",
+                                      description: `Access credentials for ${st.name} will be suspended.`,
+                                      confirmLabel: "Suspend", tone: "warning",
+                                    });
                                     if (confirmAction) {
                                       setStaffList(staffList.map(s => s.id === st.id ? { ...s, status: "Suspended" } : s));
                                     }
@@ -1693,8 +1742,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                   <span>Suspend Access</span>
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    const confirmAction = window.confirm(`Deactivate records for ${st.name} permanently?`);
+                                  onClick={async () => {
+                                    const confirmAction = await confirm({
+                                      title: "Deactivate this staff member?",
+                                      description: `Records for ${st.name} will be deactivated permanently.`,
+                                      confirmLabel: "Deactivate", tone: "danger",
+                                    });
                                     if (confirmAction) {
                                       setStaffList(staffList.filter(s => s.id !== st.id));
                                     }
@@ -1871,10 +1924,16 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                                 <RefreshCw className="h-3.5 w-3.5" /> Restore
                               </button>
                               <button
-                                onClick={() => handleAdminSoftDelete(adm.id)}
+                                onClick={() => handleAdminSoftDelete(adm.id, adm.name)}
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2 cursor-pointer"
+                              >
+                                <Ban className="h-3.5 w-3.5" /> Deactivate
+                              </button>
+                              <button
+                                onClick={() => handleAdminHardDelete(adm.id, adm.name)}
                                 className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
                               >
-                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                                <Trash2 className="h-3.5 w-3.5" /> Delete Permanently
                               </button>
                             </ActionMenu>
                           </td>
@@ -2027,6 +2086,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
           {/* REAL ASSETS — Board 6: Fixed and Mobile */}
           {activeMenu === "assets" && <AssetsPage kind={assetsTab} />}
+
+          {activeMenu === "menu" && <MenuManager />}
 
           {/* TAB 7: SETTINGS — Board 5 */}
           {activeMenu === "settings" && <SettingsPage />}
@@ -2394,8 +2455,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* Deactivate Button */}
               <button
-                onClick={() => {
-                  const confirmToggle = window.confirm(`Deactivate staff access rights for ${selectedStaff.name}?`);
+                onClick={async () => {
+                  const confirmToggle = await confirm({
+                    title: "Deactivate access rights?",
+                    description: `${selectedStaff.name} will lose access.`,
+                    confirmLabel: "Deactivate", tone: "danger",
+                  });
                   if (confirmToggle) {
                     setStaffList(staffList.filter(item => item.id !== selectedStaff.id));
                     setSelectedStaff(null);
@@ -2408,8 +2473,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
 
               {/* Suspend Access Button */}
               <button
-                onClick={() => {
-                  const confirmToggle = window.confirm(`Suspend access license keys temporarily for ${selectedStaff.name}?`);
+                onClick={async () => {
+                  const confirmToggle = await confirm({
+                    title: "Suspend access temporarily?",
+                    description: `License keys for ${selectedStaff.name} will be suspended.`,
+                    confirmLabel: "Suspend", tone: "warning",
+                  });
                   if (confirmToggle) {
                     setStaffList(staffList.map(item => item.id === selectedStaff.id ? { ...item, status: "Suspended" } : item));
                     setSelectedStaff(null);
