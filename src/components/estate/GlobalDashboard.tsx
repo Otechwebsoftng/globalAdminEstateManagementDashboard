@@ -15,6 +15,9 @@ import SettingsPage from "../../features/settings/SettingsPage";
 import SecurityPersonnelPage from "../../features/security/SecurityPersonnelPage";
 import ResidentsPage from "../../features/residents/ResidentsPage";
 import MenuManager from "../../features/menu/MenuManager";
+import AdminDetailModal from "../../features/admins/AdminDetailModal";
+import RoleDetailModal from "../../features/roles/RoleDetailModal";
+import PermissionLookup from "../../features/roles/PermissionLookup";
 import SecurityPersonnelDetail from "../../features/security/SecurityPersonnelDetail";
 import AssetsPage from "../../features/assets/AssetsPage";
 import { StatsCardSkeleton, TableSkeleton } from "../Skeleton";
@@ -151,6 +154,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
   // Selected security personnel for the detail view.
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
   const [selectedPersonnelEstateId, setSelectedPersonnelEstateId] = useState<string>("");
+  const [detailAdminId, setDetailAdminId] = useState<string | null>(null);
+  const [detailRoleId, setDetailRoleId] = useState<string | null>(null);
 
   // Row Action Menu State
 
@@ -1899,6 +1904,12 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                               trigger={<MoreVertical className="h-4 w-4 text-gray-400 hover:text-slate-900" />}
                             >
                               <div className="px-3 py-2 border-b border-gray-100">
+                                <button
+                                  onClick={() => setDetailAdminId(adm.id)}
+                                  className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-blue-600" /> View Details
+                                </button>
                                 <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
                                 <select
                                   onChange={(e) => { if (e.target.value) handleAdminUpdateRole(adm.id, e.target.value); }}
@@ -1944,6 +1955,8 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                 </div>
               </div>
 
+              <PermissionLookup />
+
               {/* Role Management Section */}
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -1977,6 +1990,13 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => setDetailRoleId(role.id)}
+                                title="View details"
+                                className="text-gray-400 hover:text-slate-900 p-1 cursor-pointer"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
                               <button
                                 onClick={() => {
                                   setEditingRole(role);
@@ -2132,6 +2152,14 @@ export default function GlobalDashboard({}: GlobalDashboardProps) {
       {/* MODAL MODULAR SUBSETS AND SLIDE-OVERS */}
 
       {/* 1. ONBOARD NEW ESTATE — 2-step wizard (Board 3) */}
+      <RoleDetailModal roleId={detailRoleId} onClose={() => setDetailRoleId(null)} />
+
+      <AdminDetailModal
+        adminId={detailAdminId}
+        source="global"
+        onClose={() => setDetailAdminId(null)}
+      />
+
       <OnboardEstateWizard
         open={isOnboardModalOpen}
         onClose={() => setIsOnboardModalOpen(false)}

@@ -21,6 +21,7 @@ import { getResidentName } from "../../lib/format";
 import ActionMenu from "../ActionMenu";
 import { useConfirm } from "../ui/ConfirmDialog";
 import ReasonDialog from "../ui/ReasonDialog";
+import AdminDetailModal from "../../features/admins/AdminDetailModal";
 import type { Resident, Admin, Role } from "../../types/api";
 
 interface EstateDetailViewProps {
@@ -331,6 +332,25 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
     "delete",
     true,
   );
+
+  const [detailAdmin, setDetailAdmin] = useState<{ id: string; scoped: boolean } | null>(null);
+
+  /** DELETE /estate-admin/{userId}/delete — irreversible, unlike soft-delete. */
+  const handleEstateAdminHardDelete = async (adminId: string) => {
+    const ok = await confirm({
+      title: "Delete this estate admin permanently?",
+      description: "They will be removed for good. This cannot be undone.",
+      confirmLabel: "Delete", tone: "danger",
+    });
+    if (!ok) return;
+    try {
+      await estateAdminApi.remove(adminId);
+      queryClient.invalidateQueries({ queryKey: qk.estateAdmins(estate?.id) });
+      showToast("Estate admin deleted", "success");
+    } catch (err: any) {
+      showToast(err?.message || "Could not delete this estate admin");
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -762,7 +782,19 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                           <ActionMenu
                             trigger={<MoreVertical className="h-4 w-4 text-gray-300 hover:text-slate-900" />}
                           >
-                            <div className="px-3 py-2 border-b border-gray-100">
+                            <button
+                              onClick={() => setDetailAdmin({ id: adm.id, scoped: false })}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => setDetailAdmin({ id: adm.id, scoped: true })}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                            >
+                              View in This Estate
+                            </button>
+                            <div className="px-3 py-2 border-b border-t border-gray-100">
                               <span className="text-[9px] font-bold text-gray-400 uppercase">Change Role</span>
                               <select
                                 onChange={(e) => { if (e.target.value) handleEstateAdminUpdateRole(adm.id, e.target.value); }}
@@ -789,9 +821,15 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
                             </button>
                             <button
                               onClick={() => handleEstateAdminDelete(adm.id)}
+                              className="w-full text-left px-3 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 cursor-pointer"
+                            >
+                              Deactivate
+                            </button>
+                            <button
+                              onClick={() => handleEstateAdminHardDelete(adm.id)}
                               className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 cursor-pointer"
                             >
-                              Delete
+                              Delete Permanently
                             </button>
                           </ActionMenu>
                         </td>
@@ -944,6 +982,13 @@ export default function EstateDetailView({ estate, onBack, onEdit }: EstateDetai
           </button>
         ))}
       </div>
+
+      <AdminDetailModal
+        adminId={detailAdmin?.id ?? null}
+        source={detailAdmin?.scoped ? "scoped" : "estate"}
+        estateId={estate?.id}
+        onClose={() => setDetailAdmin(null)}
+      />
 
       <ReasonDialog
         open={isSuspending}
